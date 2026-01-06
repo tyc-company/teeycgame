@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>井字棋</title>
+<style>
+table { margin: 20px auto; border-collapse: collapse; }
+td { width: 60px; height: 60px; text-align: center; font-size: 40px; border: 1px solid #333; cursor: pointer; }
+h2 { text-align: center; color: #ff6600; }
+</style>
+</head>
+<body>
+<h2>井字棋 ❌⭕</h2>
+<table id="board">
+<tr><td></td><td></td><td></td></tr>
+<tr><td></td><td></td><td></td></tr>
+<tr><td></td><td></td><td></td></tr>
+</table>
+
+<script>
+let board = document.getElementById('board');
+let turn = "X";
+
+board.addEventListener('click', e => {
+    if(e.target.tagName === "TD" && e.target.textContent===""){
+        e.target.textContent = turn;
+        if(checkWin(turn)){
+            alert(turn + " 恭喜你!");
+            resetBoard();
+        } else {
+            turn = turn==="X"?"O":"X";
+        }
+    }
+});
+
+function checkWin(p){
+    let cells = [...board.getElementsByTagName('td')];
+    let lines = [
+        [0,1,2],[3,4,5],[6,7,8],
+        [0,3,6],[1,4,7],[2,5,8],
+        [0,4,8],[2,4,6]
+    ];
+    return lines.some(l => l.every(i => cells[i].textContent===p));
+}
+
+function resetBoard(){
+    [...board.getElementsByTagName('td')].forEach(c => c.textContent="");
+    turn = "X";
+}
+</script>
+</body>
+</html>
