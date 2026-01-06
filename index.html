@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>郑游戏</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <h1>🎮 欢迎游玩郑游戏</h1>
+    <div id="game-list"></div>
+
+    <script>
+        fetch('games.json')
+        .then(res => res.json())
+        .then(games => {
+            const container = document.getElementById('game-list');
+            games.forEach(game => {
+                const div = document.createElement('div');
+                div.className = 'game-item';
+                div.innerHTML = `<a href="${game.url}" target="_blank">${game.name}</a>`;
+                container.appendChild(div);
+            });
+        });
+    </script>
+</body>
+</html>
