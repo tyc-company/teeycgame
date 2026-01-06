@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>贪吃蛇</title>
+<style>
+canvas { background: #eee; display: block; margin: 20px auto; }
+</style>
+</head>
+<body>
+<h2>贪吃蛇 🐍</h2>
+<canvas id="game" width="400" height="400"></canvas>
+<script>
+let canvas = document.getElementById('game');
+let ctx = canvas.getContext('2d');
+let box = 20;
+let snake = [{x: 8*box, y: 8*box}];
+let food = {x: Math.floor(Math.random()*20)*box, y: Math.floor(Math.random()*20)*box};
+let dir = "";
+
+document.addEventListener("keydown", e => {
+    if(e.key === "ArrowUp") dir="UP";
+    else if(e.key === "ArrowDown") dir="DOWN";
+    else if(e.key === "ArrowLeft") dir="LEFT";
+    else if(e.key === "ArrowRight") dir="RIGHT";
+});
+
+function draw() {
+    ctx.fillStyle = "white";
+    ctx.fillRect(0,0,400,400);
+    snake.forEach((s,i)=>{
+        ctx.fillStyle = i===0 ? "green" : "black";
+        ctx.fillRect(s.x, s.y, box, box);
+    });
+    ctx.fillStyle="red";
+    ctx.fillRect(food.x, food.y, box, box);
+
+    let head = {...snake[0]};
+    if(dir==="UP") head.y -= box;
+    else if(dir==="DOWN") head.y += box;
+    else if(dir==="LEFT") head.x -= box;
+    else if(dir==="RIGHT") head.x += box;
+
+    if(head.x===food.x && head.y===food.y){
+        food = {x: Math.floor(Math.random()*20)*box, y: Math.floor(Math.random()*20)*box};
+    } else {
+        snake.pop();
+    }
+
+    if(head.x<0 || head.x>=400 || head.y<0 || head.y>=400 || snake.some(s=>s.x===head.x && s.y===head.y)){
+        alert("游戏结束!");
+        snake = [{x: 8*box, y: 8*box}];
+        dir = "";
+    }
+
+    snake.unshift(head);
+}
+setInterval(draw, 200);
+</script>
+</body>
+</html>
