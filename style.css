@@ -1,0 +1,29 @@
+body {
+    text-align: center;
+    font-family: Arial, sans-serif;
+    background-color: #f0f0f0;
+}
+
+h1 {
+    margin-top: 30px;
+    color: #ff6600;
+}
+
+.game-item {
+    margin: 15px;
+    font-size: 20px;
+}
+
+.game-item a {
+    text-decoration: none;
+    color: #333;
+    padding: 10px 20px;
+    background-color: #ffcc66;
+    border-radius: 8px;
+    transition: 0.3s;
+}
+
+.game-item a:hover {
+    background-color: #ff9900;
+    color: white;
+}
