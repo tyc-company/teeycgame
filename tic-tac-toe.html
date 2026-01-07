@@ -4,49 +4,135 @@
 <meta charset="UTF-8">
 <title>井字棋</title>
 <style>
-table { margin: 20px auto; border-collapse: collapse; }
-td { width: 60px; height: 60px; text-align: center; font-size: 40px; border: 1px solid #333; cursor: pointer; }
-h2 { text-align: center; color: #ff6600; }
+body { text-align: center; font-family: Arial, sans-serif; background: #f0f0f0; }
+h2 { color: #ff6600; }
+#board { display: grid; grid-template-columns: 60px 60px 60px; grid-gap: 5px; margin: 20px auto; }
+.cell { width: 60px; height: 60px; background: #fff; border: 2px solid #333; display:flex; align-items:center; justify-content:center; font-size:36px; cursor:pointer; }
+button, select { margin: 10px; padding: 5px 10px; font-size:16px; }
+button:hover { background-color:#ff9900; color:white; cursor:pointer; }
 </style>
 </head>
 <body>
 <h2>井字棋 ❌⭕</h2>
-<table id="board">
-<tr><td></td><td></td><td></td></tr>
-<tr><td></td><td></td><td></td></tr>
-<tr><td></td><td></td><td></td></tr>
-</table>
+
+<label>选择模式：
+  <select id="modeSelect">
+    <option value="computer">玩家 vs 电脑</option>
+    <option value="human">玩家 vs 玩家</option>
+  </select>
+</label>
+<br>
+<div id="board"></div>
+<button onclick="resetGame()">重新开始</button>
 
 <script>
-let board = document.getElementById('board');
-let turn = "X";
+// ==== 游戏数据 ====
+let board = []; // 棋盘数组
+let currentPlayer = '❌'; // 当前玩家
+let mode = 'computer';    // 对战模式
 
-board.addEventListener('click', e => {
-    if(e.target.tagName === "TD" && e.target.textContent===""){
-        e.target.textContent = turn;
-        if(checkWin(turn)){
-            alert(turn + " 恭喜你!");
-            resetBoard();
-        } else {
-            turn = turn==="X"?"O":"X";
+// ==== 初始化棋盘 ====
+function createBoard() {
+    const container = document.getElementById('board');
+    container.innerHTML = '';
+    board = [['','',''],['','',''],['','','']];
+    currentPlayer = '❌';
+    mode = document.getElementById('modeSelect').value;
+
+    for(let y=0;y<3;y++){
+        for(let x=0;x<3;x++){
+            const cell = document.createElement('div');
+            cell.className = 'cell';
+            cell.dataset.x = x;
+            cell.dataset.y = y;
+            cell.addEventListener('click', handleMove);
+            container.appendChild(cell);
         }
     }
-});
-
-function checkWin(p){
-    let cells = [...board.getElementsByTagName('td')];
-    let lines = [
-        [0,1,2],[3,4,5],[6,7,8],
-        [0,3,6],[1,4,7],[2,5,8],
-        [0,4,8],[2,4,6]
-    ];
-    return lines.some(l => l.every(i => cells[i].textContent===p));
 }
 
-function resetBoard(){
-    [...board.getElementsByTagName('td')].forEach(c => c.textContent="");
-    turn = "X";
+// ==== 玩家落子 ====
+function handleMove(e){
+    const x = parseInt(e.target.dataset.x);
+    const y = parseInt(e.target.dataset.y);
+
+    if(board[y][x] !== '') return; // 已有棋子
+
+    board[y][x] = currentPlayer;
+    updateBoard();
+
+    if(checkWin(currentPlayer)){
+        alert(currentPlayer + ' 获胜！🎉');
+        return;
+    }
+    if(isFull()){
+        alert('平局！');
+        return;
+    }
+
+    if(mode === 'human'){
+        currentPlayer = currentPlayer === '❌' ? '⭕' : '❌';
+    } else if(mode === 'computer'){
+        computerMove();
+    }
 }
+
+// ==== 电脑落子（随机） ====
+function computerMove(){
+    let empty = [];
+    for(let y=0;y<3;y++){
+        for(let x=0;x<3;x++){
+            if(board[y][x]==='') empty.push({x,y});
+        }
+    }
+    if(empty.length===0) return;
+    const move = empty[Math.floor(Math.random()*empty.length)];
+    board[move.y][move.x] = '⭕';
+    updateBoard();
+
+    if(checkWin('⭕')){
+        alert('电脑获胜！💻');
+        return;
+    }
+    if(isFull()){
+        alert('平局！');
+        return;
+    }
+}
+
+// ==== 更新显示 ====
+function updateBoard(){
+    const cells = document.querySelectorAll('.cell');
+    cells.forEach(c=>{
+        const x = parseInt(c.dataset.x);
+        const y = parseInt(c.dataset.y);
+        c.textContent = board[y][x];
+    });
+}
+
+// ==== 检查胜利 ====
+function checkWin(player){
+    for(let i=0;i<3;i++){
+        if(board[i][0]===player && board[i][1]===player && board[i][2]===player) return true; // 横
+        if(board[0][i]===player && board[1][i]===player && board[2][i]===player) return true; // 纵
+    }
+    if(board[0][0]===player && board[1][1]===player && board[2][2]===player) return true; // 对角
+    if(board[0][2]===player && board[1][1]===player && board[2][0]===player) return true;
+    return false;
+}
+
+// ==== 检查平局 ====
+function isFull(){
+    return board.flat().every(cell=>cell!=='');
+}
+
+// ==== 重置游戏 ====
+function resetGame(){
+    createBoard();
+}
+
+// ==== 页面加载时初始化 ====
+createBoard();
 </script>
 </body>
 </html>
