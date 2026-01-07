@@ -41,7 +41,7 @@ const cols = canvas.width / size;
 const rows = canvas.height / size;
 
 let snake = [];
-let dir = {x:1, y:0};
+let dir = {x:1,y:0};
 let food = {};
 let obstacles = [];
 let gameInterval = null;
@@ -58,22 +58,10 @@ function startSnakeGame() {
     snakeShape = document.getElementById('snakeShapeSelect').value;
     snake = [{x:5,y:5}];
     dir = {x:1,y:0};
-    placeFood();
     generateObstacles(10);
+    placeFood();
     gameRunning = true;
     gameInterval = setInterval(updateSnake, 150);
-}
-
-// 放置食物 🍏
-function placeFood() {
-    while(true) {
-        let fx = Math.floor(Math.random()*cols);
-        let fy = Math.floor(Math.random()*rows);
-        if(!snake.some(s=>s.x===fx && s.y===fy) && !obstacles.some(o=>o.x===fx && o.y===fy)) {
-            food = {x:fx, y:fy};
-            break;
-        }
-    }
 }
 
 // 随机障碍物 🪨
@@ -84,11 +72,45 @@ function generateObstacles(count) {
             let ox=Math.floor(Math.random()*cols);
             let oy=Math.floor(Math.random()*rows);
             if(!snake.some(s=>s.x===ox && s.y===oy) &&
-               !obstacles.some(o=>o.x===ox && o.y===oy) &&
-               !(food.x===ox && food.y===oy)) {
+               !obstacles.some(o=>o.x===ox && o.y===oy)) {
                 obstacles.push({x:ox,y:oy});
                 break;
             }
+        }
+    }
+}
+
+// 检查食物位置合法性
+function isValidFood(x,y){
+    // 角落禁止
+    if((x===0 && y===0)||(x===0 && y===rows-1)||(x===cols-1 && y===0)||(x===cols-1 && y===rows-1))
+        return false;
+    // 食物四边障碍统计
+    let count = 0;
+    let dirs = [{x:0,y:-1},{x:0,y:1},{x:-1,y:0},{x:1,y:0}];
+    for(let d of dirs){
+        let nx=x+d.x, ny=y+d.y;
+        if(nx>=0 && nx<cols && ny>=0 && ny<rows){
+            if(obstacles.some(o=>o.x===nx && o.y===ny)) count++;
+        }
+    }
+    // 食物在墙边
+    if(x===0 || x===cols-1 || y===0 || y===rows-1){
+        if(count>0) return false;
+    } else {
+        if(count>1) return false;
+    }
+    return true;
+}
+
+// 放置食物 🍏
+function placeFood(){
+    while(true){
+        let fx=Math.floor(Math.random()*cols);
+        let fy=Math.floor(Math.random()*rows);
+        if(!snake.some(s=>s.x===fx && s.y===fy) && isValidFood(fx,fy)){
+            food={x:fx,y:fy};
+            break;
         }
     }
 }
@@ -120,7 +142,7 @@ function updateSnake() {
 }
 
 // 绘制
-function drawSnake() {
+function drawSnake(){
     ctx.clearRect(0,0,canvas.width,canvas.height);
 
     // 绘制食物 🍏
@@ -155,30 +177,24 @@ function drawSnake() {
         }
     }
 
-    // 绘制蛇头尖端朝向移动方向
+    // 绘制蛇头
     let head = snake[0];
-    ctx.fillStyle=(snakeColor==='rainbow')?rainbowColors[rainbowIndex%rainbowColors.length]:snakeColor;
-    ctx.beginPath();
-    let px = head.x*size, py = head.y*size;
-    if(dir.x===1){ // 右
-        ctx.moveTo(px, py);
-        ctx.lineTo(px, py+size);
-        ctx.lineTo(px+size, py+size/2);
-    } else if(dir.x===-1){ // 左
-        ctx.moveTo(px+size, py);
-        ctx.lineTo(px+size, py+size);
-        ctx.lineTo(px, py+size/2);
-    } else if(dir.y===1){ // 下
-        ctx.moveTo(px, py);
-        ctx.lineTo(px+size, py);
-        ctx.lineTo(px+size/2, py+size);
-    } else if(dir.y===-1){ // 上
-        ctx.moveTo(px, py+size);
-        ctx.lineTo(px+size, py+size);
-        ctx.lineTo(px+size/2, py);
+    if(snakeShape==='square'){
+        // 正方形头为灰色
+        ctx.fillStyle = 'gray';
+        ctx.fillRect(head.x*size, head.y*size, size, size);
+    } else {
+        // 蛇头尖端朝向
+        ctx.fillStyle=(snakeColor==='rainbow')?rainbowColors[rainbowIndex%rainbowColors.length]:snakeColor;
+        ctx.beginPath();
+        let px = head.x*size, py = head.y*size;
+        if(dir.x===1){ ctx.moveTo(px,py); ctx.lineTo(px,py+size); ctx.lineTo(px+size,py+size/2);}
+        else if(dir.x===-1){ ctx.moveTo(px+size,py); ctx.lineTo(px+size,py+size); ctx.lineTo(px,py+size/2);}
+        else if(dir.y===1){ ctx.moveTo(px,py); ctx.lineTo(px+size,py); ctx.lineTo(px+size/2,py+size);}
+        else if(dir.y===-1){ ctx.moveTo(px,py+size); ctx.lineTo(px+size,py+size); ctx.lineTo(px+size/2,py);}
+        ctx.closePath();
+        ctx.fill();
     }
-    ctx.closePath();
-    ctx.fill();
 
     if(snakeColor==='rainbow') rainbowIndex = (rainbowIndex + 1) % rainbowColors.length;
 }
@@ -199,3 +215,4 @@ document.getElementById('startButton').addEventListener('click', ()=>{
 
 </body>
 </html>
+
