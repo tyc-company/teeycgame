@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<title>随机可解 Emoji 推箱子</title>
+<title>推箱子（每箱对应一个目标）</title>
 <style>
 body { text-align: center; font-family: Arial, sans-serif; background: #f0f0f0; }
 h2 { color: #ff6600; }
@@ -13,89 +13,84 @@ button:hover { background-color: #ff9900; color: white; }
 </style>
 </head>
 <body>
-<h2>随机可解 Emoji 推箱子 🧱🤗📦❌⚓</h2>
+<h2>推箱子 🧱🤗📦❌⚓</h2>
 <button onclick="resetLevel()">重置关卡</button>
 <div id="game"></div>
 <p>用箭头键移动</p>
 
 <script>
 let grid=[], player={x:0,y:0}, rows=0, cols=0, boxCount=0, level=1;
-let initialState=[]; // 保存初始状态用于重置
+let initialState=[];
 
 function rand(a,b){ return Math.floor(Math.random()*(b-a+1))+a; }
 function cloneGrid(g){ return g.map(r=>r.slice()); }
 
-// 判断是否角落
-function isCorner(x,y){ 
+// 检查是否角落
+function isCorner(x,y){
     let walls=0;
-    if(grid[y-1][x]==='🧱' || grid[y-1][x]==='⚓') walls++;
-    if(grid[y+1][x]==='🧱' || grid[y+1][x]==='⚓') walls++;
-    if(grid[y][x-1]==='🧱' || grid[y][x-1]==='⚓') walls++;
-    if(grid[y][x+1]==='🧱' || grid[y][x+1]==='⚓') walls++;
+    if(grid[y-1][x]==='🧱'||grid[y-1][x]==='⚓') walls++;
+    if(grid[y+1][x]==='🧱'||grid[y+1][x]==='⚓') walls++;
+    if(grid[y][x-1]==='🧱'||grid[y][x-1]==='⚓') walls++;
+    if(grid[y][x+1]==='🧱'||grid[y][x+1]==='⚓') walls++;
     return walls>=2;
 }
 
-// 简单可解检查：每个箱子周围至少有一个空格可推动
-function isSolvable(){
-    for(let y=1;y<rows-1;y++){
-        for(let x=1;x<cols-1;x++){
-            if(grid[y][x]==='📦'){
-                let canPush=false;
-                if(grid[y-1][x]===' ' || grid[y+1][x]===' ' || grid[y][x-1]===' ' || grid[y][x+1]===' ') canPush=true;
-                if(!canPush) return false;
-            }
-        }
-    }
-    return true;
-}
-
-// 随机生成地图
+// 生成可解关卡，每个箱子对应一个目标
 function generateLevel(){
-    while(true){
-        rows=rand(8,12); cols=rand(8,12);
-        grid=[];
-        for(let y=0;y<rows;y++){
-            const row=[];
-            for(let x=0;x<cols;x++){
-                if(y===0||y===rows-1||x===0||x===cols-1) row.push('🧱');
-                else row.push(' ');
-            }
-            grid.push(row);
-        }
+    rows=rand(8,12);
+    cols=rand(8,12);
+    grid=[];
 
-        // 添加随机障碍
-        let obstacles=rand(3,6);
-        while(obstacles>0){
-            let x=rand(1,cols-2), y=rand(1,rows-2);
-            if(grid[y][x]===' '){ grid[y][x]='⚓'; obstacles--; }
+    // 空地图 + 墙
+    for(let y=0;y<rows;y++){
+        const row=[];
+        for(let x=0;x<cols;x++){
+            if(y===0||y===rows-1||x===0||x===cols-1) row.push('🧱');
+            else row.push(' ');
         }
-
-        // 放玩家
-        while(true){
-            let px=rand(1,cols-2), py=rand(1,rows-2);
-            if(grid[py][px]===' '){ grid[py][px]='🤗'; player={x:px,y:py}; break; }
-        }
-
-        // 箱子数量
-        boxCount=Math.min(rand(1,4), Math.floor(rows*cols/10));
-        let placed=0;
-        while(placed<boxCount){
-            let bx=rand(1,cols-2), by=rand(1,rows-2);
-            if(grid[by][bx]===' ' && !isCorner(bx,by)){
-                grid[by][bx]='📦'; placed++;
-            }
-        }
-
-        // 目标
-        placed=0;
-        while(placed<boxCount){
-            let tx=rand(1,cols-2), ty=rand(1,rows-2);
-            if(grid[ty][tx]===' '){ grid[ty][tx]='❌'; placed++; }
-        }
-
-        if(isSolvable()) break;
+        grid.push(row);
     }
-    initialState=cloneGrid(grid); // 保存初始状态
+
+    // 箱子数量
+    boxCount=Math.min(rand(1,4),Math.floor(rows*cols/10));
+    let boxes=[], targets=[];
+
+    for(let i=0;i<boxCount;i++){
+        // 随机目标
+        while(true){
+            let tx=rand(1,cols-2), ty=rand(1,rows-2);
+            if(grid[ty][tx]===' '){ grid[ty][tx]='❌'; targets.push({x:tx,y:ty}); break; }
+        }
+        // 从目标生成箱子路径
+        let path=[], bx=targets[i].x, by=targets[i].y;
+        let dirOptions=[[0,-1],[0,1],[-1,0],[1,0]];
+        let steps=rand(2,4);
+        for(let s=0;s<steps;s++){
+            let d=dirOptions[Math.floor(Math.random()*dirOptions.length)];
+            let nx=bx+d[0], ny=by+d[1];
+            if(grid[ny][nx]===' '){ bx=nx; by=ny; path.push({x:bx,y:by}); }
+        }
+        if(path.length>0){
+            let last=path[path.length-1];
+            grid[last.y][last.x]='📦';
+            boxes.push(last);
+        }
+    }
+
+    // 玩家放在空格
+    while(true){
+        let px=rand(1,cols-2), py=rand(1,rows-2);
+        if(grid[py][px]===' '){ grid[py][px]='🤗'; player={x:px,y:py}; break; }
+    }
+
+    // 随机障碍
+    let obstacles=rand(3,6);
+    while(obstacles>0){
+        let ox=rand(1,cols-2), oy=rand(1,rows-2);
+        if(grid[oy][ox]===' '){ grid[oy][ox]='⚓'; obstacles--; }
+    }
+
+    initialState=cloneGrid(grid);
     render();
 }
 
@@ -115,7 +110,7 @@ function render(){
     }
 }
 
-// 玩家移动
+// 移动逻辑
 function move(dx,dy){
     const x=player.x, y=player.y;
     const nx=x+dx, ny=y+dy;
@@ -145,16 +140,15 @@ function move(dx,dy){
     }
 }
 
-// 检测胜利
+// 检查胜利
 function checkWin(){
     for(let y=0;y<rows;y++){
         for(let x=0;x<cols;x++){
             if(grid[y][x]==='📦'){
                 let onTarget=false;
-                for(let yy=0;yy<rows;yy++){
-                    for(let xx=0;xx<cols;xx++){
-                        if(grid[yy][xx]==='❌' && x===xx && y===yy) onTarget=true;
-                    }
+                for(let t of grid.flat().map((c,i)=>({c,i}))){ 
+                    let yy=Math.floor(t.i/cols), xx=t.i%cols;
+                    if(t.c==='❌' && xx===x && yy===y) onTarget=true;
                 }
                 if(!onTarget) return false;
             }
@@ -178,8 +172,8 @@ document.addEventListener('keydown', e=>{
     else if(e.key==='ArrowRight') move(1,0);
 });
 
-// 初始生成
 generateLevel();
 </script>
 </body>
 </html>
+
