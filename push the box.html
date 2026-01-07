@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<title>推箱子（每箱对应一个目标）</title>
+<title>推箱子</title>
 <style>
 body { text-align: center; font-family: Arial, sans-serif; background: #f0f0f0; }
 h2 { color: #ff6600; }
@@ -16,7 +16,7 @@ button:hover { background-color: #ff9900; color: white; }
 <h2>推箱子 🧱🤗📦❌⚓</h2>
 <button onclick="resetLevel()">重置关卡</button>
 <div id="game"></div>
-<p>用箭头键移动</p>
+<p>请使用箭头键移动</p>
 
 <script>
 let grid=[], player={x:0,y:0}, rows=0, cols=0, boxCount=0, level=1;
@@ -154,7 +154,7 @@ function checkWin(){
             }
         }
     }
-    alert(`第 ${level} 关完成 🎉`);
+    alert(`恭喜你🎉完成了第 ${level} 关`);
     level++;
     generateLevel();
 }
