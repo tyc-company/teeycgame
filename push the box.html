@@ -2,127 +2,173 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<title>推箱子</title>
+<title>随机可解 Emoji 推箱子</title>
 <style>
 body { text-align: center; font-family: Arial, sans-serif; background: #f0f0f0; }
 h2 { color: #ff6600; }
 #game { display: inline-block; margin-top: 20px; }
 .cell { width: 40px; height: 40px; display: inline-block; vertical-align: top; line-height: 40px; font-size: 24px; border: 1px solid #ccc; }
-.wall { background: #888; }
-.player { background: #4caf50; color: white; }
-.box { background: #ff9800; color: white; }
-.target { background: #ffc107; }
-.box.target { background: #ff5722; }
+button { margin: 10px; padding: 5px 15px; font-size: 16px; border-radius: 5px; background-color: #ffcc66; border: none; cursor: pointer; }
+button:hover { background-color: #ff9900; color: white; }
 </style>
 </head>
 <body>
-<h2>推箱子 🧱➡️📦</h2>
+<h2>随机可解 Emoji 推箱子 🧱🤗📦❌⚓</h2>
+<button onclick="resetLevel()">重置关卡</button>
 <div id="game"></div>
 <p>用箭头键移动</p>
 
 <script>
-const levels = [
-`#####
-#@ $.#
-#   #
-#####`,
-`#######
-#@ $. #
-#  $  #
-#  .  #
-#######`
-];
+let grid=[], player={x:0,y:0}, rows=0, cols=0, boxCount=0, level=1;
+let initialState=[]; // 保存初始状态用于重置
 
-let currentLevel = 0;
-let map = [];
-let grid = [];
-let player = {x:0, y:0};
+function rand(a,b){ return Math.floor(Math.random()*(b-a+1))+a; }
+function cloneGrid(g){ return g.map(r=>r.slice()); }
 
-function loadLevel(levelIndex){
-    map = levels[levelIndex].split('\n');
-    init();
+// 判断是否角落
+function isCorner(x,y){ 
+    let walls=0;
+    if(grid[y-1][x]==='🧱' || grid[y-1][x]==='⚓') walls++;
+    if(grid[y+1][x]==='🧱' || grid[y+1][x]==='⚓') walls++;
+    if(grid[y][x-1]==='🧱' || grid[y][x-1]==='⚓') walls++;
+    if(grid[y][x+1]==='🧱' || grid[y][x+1]==='⚓') walls++;
+    return walls>=2;
 }
 
-function init() {
-    const container = document.getElementById('game');
-    container.innerHTML = "";
-    grid = [];
-    for(let y=0;y<map.length;y++){
-        const row = [];
-        const line = map[y];
-        const divRow = document.createElement('div');
-        for(let x=0;x<line.length;x++){
-            const cell = line[x];
-            const div = document.createElement('div');
-            div.className = 'cell';
-            if(cell === '#') div.classList.add('wall');
-            else if(cell === '@') { div.classList.add('player'); player = {x,y}; }
-            else if(cell === '$') div.classList.add('box');
-            else if(cell === '.') div.classList.add('target');
-            else if(cell === '*') div.classList.add('box','target');
-            row.push({el: div, type: cell});
+// 简单可解检查：每个箱子周围至少有一个空格可推动
+function isSolvable(){
+    for(let y=1;y<rows-1;y++){
+        for(let x=1;x<cols-1;x++){
+            if(grid[y][x]==='📦'){
+                let canPush=false;
+                if(grid[y-1][x]===' ' || grid[y+1][x]===' ' || grid[y][x-1]===' ' || grid[y][x+1]===' ') canPush=true;
+                if(!canPush) return false;
+            }
+        }
+    }
+    return true;
+}
+
+// 随机生成地图
+function generateLevel(){
+    while(true){
+        rows=rand(8,12); cols=rand(8,12);
+        grid=[];
+        for(let y=0;y<rows;y++){
+            const row=[];
+            for(let x=0;x<cols;x++){
+                if(y===0||y===rows-1||x===0||x===cols-1) row.push('🧱');
+                else row.push(' ');
+            }
+            grid.push(row);
+        }
+
+        // 添加随机障碍
+        let obstacles=rand(3,6);
+        while(obstacles>0){
+            let x=rand(1,cols-2), y=rand(1,rows-2);
+            if(grid[y][x]===' '){ grid[y][x]='⚓'; obstacles--; }
+        }
+
+        // 放玩家
+        while(true){
+            let px=rand(1,cols-2), py=rand(1,rows-2);
+            if(grid[py][px]===' '){ grid[py][px]='🤗'; player={x:px,y:py}; break; }
+        }
+
+        // 箱子数量
+        boxCount=Math.min(rand(1,4), Math.floor(rows*cols/10));
+        let placed=0;
+        while(placed<boxCount){
+            let bx=rand(1,cols-2), by=rand(1,rows-2);
+            if(grid[by][bx]===' ' && !isCorner(bx,by)){
+                grid[by][bx]='📦'; placed++;
+            }
+        }
+
+        // 目标
+        placed=0;
+        while(placed<boxCount){
+            let tx=rand(1,cols-2), ty=rand(1,rows-2);
+            if(grid[ty][tx]===' '){ grid[ty][tx]='❌'; placed++; }
+        }
+
+        if(isSolvable()) break;
+    }
+    initialState=cloneGrid(grid); // 保存初始状态
+    render();
+}
+
+// 渲染地图
+function render(){
+    const container=document.getElementById('game');
+    container.innerHTML='';
+    for(let y=0;y<rows;y++){
+        const divRow=document.createElement('div');
+        for(let x=0;x<cols;x++){
+            const div=document.createElement('div');
+            div.className='cell';
+            div.textContent=grid[y][x];
             divRow.appendChild(div);
         }
         container.appendChild(divRow);
-        grid.push(row);
     }
 }
 
+// 玩家移动
 function move(dx,dy){
-    const x = player.x;
-    const y = player.y;
-    const targetX = x+dx;
-    const targetY = y+dy;
-    const targetCell = grid[targetY][targetX];
-
-    if(targetCell.type === '#' ) return; //墙
-    if(targetCell.type === '$' || targetCell.type === '*'){ //箱子
-        const nextX = targetX+dx;
-        const nextY = targetY+dy;
-        const nextCell = grid[nextY][nextX];
-        if(nextCell.type === ' ' || nextCell.type === '.') { 
-            if(nextCell.type === '.') nextCell.type = '*';
-            else nextCell.type = '$';
-            targetCell.type = (targetCell.type==='*') ? '.' : ' ';
-        } else return; //不能推
-    }
-    //移动玩家
-    const currentCell = grid[y][x];
-    currentCell.type = (currentCell.type==='@') ? ' ' : '.';
-    targetCell.type = (targetCell.type==='.') ? '@' : '@';
-    player = {x: targetX, y: targetY};
-    render();
-    checkWin();
-}
-
-function render(){
-    for(let y=0;y<grid.length;y++){
-        for(let x=0;x<grid[y].length;x++){
-            const c = grid[y][x];
-            c.el.className = 'cell';
-            if(c.type === '#') c.el.classList.add('wall');
-            else if(c.type === '@') c.el.classList.add('player');
-            else if(c.type === '$') c.el.classList.add('box');
-            else if(c.type === '.') c.el.classList.add('target');
-            else if(c.type === '*') c.el.classList.add('box','target');
+    const x=player.x, y=player.y;
+    const nx=x+dx, ny=y+dy;
+    if(nx<0||nx>=cols||ny<0||ny>=rows) return;
+    const target=grid[ny][nx];
+    if(target==='🧱'||target==='⚓') return;
+    if(target==='📦'){
+        const nnx=nx+dx, nny=ny+dy;
+        if(nnx<0||nnx>=cols||nny<0||nny>=rows) return;
+        const next=grid[nny][nnx];
+        if(next===' ' || next==='❌'){
+            grid[nny][nnx]='📦';
+            grid[ny][nx]='🤗';
+            grid[y][x]=' ';
+            player={x:nx,y:ny};
+            render();
+            checkWin();
         }
+        return;
+    }
+    if(target===' ' || target==='❌'){
+        grid[ny][nx]='🤗';
+        grid[y][x]=' ';
+        player={x:nx,y:ny};
+        render();
+        checkWin();
     }
 }
 
+// 检测胜利
 function checkWin(){
-    for(let y=0;y<grid.length;y++){
-        for(let x=0;x<grid[y].length;x++){
-            if(grid[y][x].type === '$') return;
+    for(let y=0;y<rows;y++){
+        for(let x=0;x<cols;x++){
+            if(grid[y][x]==='📦'){
+                let onTarget=false;
+                for(let yy=0;yy<rows;yy++){
+                    for(let xx=0;xx<cols;xx++){
+                        if(grid[yy][xx]==='❌' && x===xx && y===yy) onTarget=true;
+                    }
+                }
+                if(!onTarget) return false;
+            }
         }
     }
-    //全部箱子到目标了 → 自动进入下一关
-    alert("关卡完成 🎉");
-    currentLevel++;
-    if(currentLevel >= levels.length){
-        alert("你已经完成所有关卡！游戏重新开始");
-        currentLevel = 0;
-    }
-    loadLevel(currentLevel);
+    alert(`第 ${level} 关完成 🎉`);
+    level++;
+    generateLevel();
+}
+
+// 重置关卡
+function resetLevel(){
+    grid=cloneGrid(initialState);
+    render();
 }
 
 document.addEventListener('keydown', e=>{
@@ -132,8 +178,8 @@ document.addEventListener('keydown', e=>{
     else if(e.key==='ArrowRight') move(1,0);
 });
 
-//初始加载第一关
-loadLevel(currentLevel);
+// 初始生成
+generateLevel();
 </script>
 </body>
 </html>
