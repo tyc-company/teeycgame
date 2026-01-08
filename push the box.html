@@ -4,214 +4,188 @@
 <meta charset="UTF-8">
 <title>推箱子 🧱📦🤗❌</title>
 <style>
-  body { font-family: Arial, sans-serif; text-align: center; }
-  table { margin: 20px auto; border-collapse: collapse; }
-  td { width: 40px; height: 40px; text-align: center; vertical-align: middle; font-size: 32px; border: 1px solid #ccc; }
-  button { margin: 5px; padding: 5px 10px; font-size: 16px; }
-  #controls { margin:10px; }
+body{font-family:Arial;text-align:center}
+table{margin:auto;border-collapse:collapse}
+td{width:40px;height:40px;font-size:30px;text-align:center}
+button{margin:4px;padding:6px 10px;font-size:16px}
 </style>
 </head>
 <body>
 
-<h2>推箱子 🪨📦🤗❌</h2>
+<h2>推箱子</h2>
 
-<div id="controls">
-  <button onclick="move(-1,0)">左</button>
-  <button onclick="move(1,0)">右</button>
-  <button onclick="move(0,-1)">上</button>
-  <button onclick="move(0,1)">下</button>
-  <button onclick="undo()">撤销</button>
-  <button onclick="resetLevel()">重置关卡</button>
+<div>
+  <button onclick="move(0,-1)">⬆</button><br>
+  <button onclick="move(-1,0)">⬅</button>
+  <button onclick="move(1,0)">➡</button><br>
+  <button onclick="move(0,1)">⬇</button>
 </div>
 
-<div id="levelInfo"></div>
-<div id="gameBoard"></div>
+<div>
+  <button onclick="undo()">↩ 撤销</button>
+  <button onclick="resetLevel()">🔄 重置</button>
+</div>
+
+<div id="info"></div>
+<div id="game"></div>
 
 <script>
-const WALL = '🧱';
-const OBSTACLE = '🪨';
-const PLAYER = '🤗';
-const BOX = '📦';
-const TARGET = '❌';
-const BOX_ON_TARGET = '✅';
+const WALL='🧱', ROCK='🪨', BOX='📦', TARGET='❌', BOX_OK='✅';
 
-let currentLevel = 1;
-let map = [];
-let player = {x:0,y:0};
-let width = 8;
-let height = 8;
+let width=8, height=8;
+let ground=[], boxes=[], player={x:0,y:0};
+let history=[];
 
-// 保存历史状态，用于撤销
-let history = [];
+// 初始化关卡
+function generateLevel(){
+  ground=Array.from({length:height},()=>Array(width).fill(' '));
+  boxes=[]; history=[];
 
-// 深拷贝地图
-function copyMap(m){
-    return m.map(row=>row.slice());
+  // 墙
+  for(let y=0;y<height;y++)
+    for(let x=0;x<width;x++)
+      if(x===0||y===0||x===width-1||y===height-1)
+        ground[y][x]=WALL;
+
+  // 障碍
+  for(let i=0;i<6;i++){
+    let x,y;
+    do{
+      x=rand(1,width-2); y=rand(1,height-2);
+    }while(ground[y][x]!==' ');
+    ground[y][x]=ROCK;
+  }
+
+  // 玩家
+  do{
+    player.x=rand(1,width-2);
+    player.y=rand(1,height-2);
+  }while(ground[player.y][player.x]!==' ');
+
+  // 箱子 + 目标
+  for(let i=0;i<3;i++){
+    let bx,by,tx,ty;
+    do{
+      bx=rand(1,width-2); by=rand(1,height-2);
+    }while(ground[by][bx]!==' '||isCorner(bx,by));
+    boxes.push({x:bx,y:by,on:false});
+
+    do{
+      tx=rand(1,width-2); ty=rand(1,height-2);
+    }while(ground[ty][tx]!==' ');
+    ground[ty][tx]=TARGET;
+  }
+
+  save();
+  draw();
 }
 
-// 随机生成一关
-function generateLevel() {
-    map = Array.from({length:height},()=>Array.from({length:width},()=> ' '));
-    // 墙边
-    for(let y=0;y<height;y++){
-        for(let x=0;x<width;x++){
-            if(x===0||y===0||x===width-1||y===height-1) map[y][x]=WALL;
-        }
-    }
-    // 障碍物
-    for(let i=0;i<8;i++){
-        while(true){
-            let ox = Math.floor(Math.random()*(width-2))+1;
-            let oy = Math.floor(Math.random()*(height-2))+1;
-            if(map[oy][ox]===' '){
-                map[oy][ox]=OBSTACLE;
-                break;
-            }
-        }
-    }
-    // 玩家
-    while(true){
-        let px=Math.floor(Math.random()*(width-2))+1;
-        let py=Math.floor(Math.random()*(height-2))+1;
-        if(map[py][px]===' '){
-            map[py][px]=PLAYER;
-            player={x:px,y:py};
-            break;
-        }
-    }
-    // 箱子和目标
-    let boxCount=3;
-    let boxes=[],targets=[];
-    function isCorner(x,y){
-        let wallCount=0;
-        if(map[y-1][x]===WALL) wallCount++;
-        if(map[y+1][x]===WALL) wallCount++;
-        if(map[y][x-1]===WALL) wallCount++;
-        if(map[y][x+1]===WALL) wallCount++;
-        return wallCount>=2;
-    }
-    for(let i=0;i<boxCount;i++){
-        while(true){
-            let bx=Math.floor(Math.random()*(width-2))+1;
-            let by=Math.floor(Math.random()*(height-2))+1;
-            if(map[by][bx]===' ' && !isCorner(bx,by)){
-                map[by][bx]=BOX;
-                boxes.push({x:bx,y:by});
-                break;
-            }
-        }
-        while(true){
-            let tx=Math.floor(Math.random()*(width-2))+1;
-            let ty=Math.floor(Math.random()*(height-2))+1;
-            if(map[ty][tx]===' '){
-                map[ty][tx]=TARGET;
-                targets.push({x:tx,y:ty});
-                break;
-            }
-        }
-    }
-    history=[];
-    saveHistory();
-}
-
-// 保存当前状态
-function saveHistory(){
-    history.push({
-        map:copyMap(map),
-        player:{x:player.x,y:player.y}
-    });
-    if(history.length>50) history.shift(); // 限制最大历史
-}
-
-// 撤销
-function undo(){
-    if(history.length<=1) return;
-    history.pop();
-    let state = history[history.length-1];
-    map = copyMap(state.map);
-    player = {x:state.player.x,y:state.player.y};
-    drawMap();
-}
-
-// 绘制地图
-function drawMap(){
-    const board = document.getElementById('gameBoard');
-    let html='<table>';
-    for(let y=0;y<map.length;y++){
-        html+='<tr>';
-        for(let x=0;x<map[y].length;x++){
-            html+=`<td>${map[y][x]}</td>`;
-        }
-        html+='</tr>';
-    }
-    html+='</table>';
-    board.innerHTML=html;
-    document.getElementById('levelInfo').innerText = `第 ${currentLevel} 关`;
+// 判断角落
+function isCorner(x,y){
+  let w=0;
+  if(ground[y-1][x]===WALL)w++;
+  if(ground[y+1][x]===WALL)w++;
+  if(ground[y][x-1]===WALL)w++;
+  if(ground[y][x+1]===WALL)w++;
+  return w>=2;
 }
 
 // 移动
 function move(dx,dy){
-    const nx = player.x+dx;
-    const ny = player.y+dy;
-    const nnx = nx+dx;
-    const nny = ny+dy;
+  let nx=player.x+dx, ny=player.y+dy;
+  if(isBlock(nx,ny)) return;
 
-    if(map[ny][nx]===WALL || map[ny][nx]===OBSTACLE) return;
+  let box=boxAt(nx,ny);
+  if(box){
+    let nnx=nx+dx, nny=ny+dy;
+    if(isBlock(nnx,nny)||boxAt(nnx,nny)) return;
+    box.x=nnx; box.y=nny;
+  }
 
-    if(map[ny][nx]===BOX || map[ny][nx]===BOX_ON_TARGET){
-        if(map[nny][nnx]===' '){
-            map[nny][nnx]=BOX;
-        } else if(map[nny][nnx]===TARGET){
-            map[nny][nnx]=BOX_ON_TARGET;
-        } else return;
-        map[ny][nx]=(map[ny][nx]===BOX_ON_TARGET)?TARGET:' ';
-    }
-
-    // 玩家站在目标上，目标保留
-    if(map[player.y][player.x]===PLAYER){
-        map[player.y][player.x]=' ';
-    }
-
-    // 如果玩家移动到目标，不覆盖目标
-    if(map[ny][nx]===TARGET) map[ny][nx]=PLAYER;
-    else map[ny][nx]=PLAYER;
-
-    player={x:nx,y:ny};
-    saveHistory();
-    drawMap();
-    checkWin();
+  player.x=nx; player.y=ny;
+  updateBoxes();
+  save();
+  draw();
+  checkWin();
 }
 
-// 检查胜利
+// 阻挡
+function isBlock(x,y){
+  return ground[y][x]===WALL||ground[y][x]===ROCK;
+}
+
+// 箱子
+function boxAt(x,y){
+  return boxes.find(b=>b.x===x&&b.y===y&&!b.on);
+}
+
+// 更新箱子是否到目标
+function updateBoxes(){
+  boxes.forEach(b=>{
+    b.on=ground[b.y][b.x]===TARGET;
+  });
+}
+
+// 绘制
+function draw(){
+  let html='<table>';
+  for(let y=0;y<height;y++){
+    html+='<tr>';
+    for(let x=0;x<width;x++){
+      let ch=ground[y][x];
+      let b=boxes.find(b=>b.x===x&&b.y===y);
+      if(b) ch=b.on?BOX_OK:BOX;
+      if(player.x===x&&player.y===y) ch='🤗';
+      html+=`<td>${ch}</td>`;
+    }
+    html+='</tr>';
+  }
+  html+='</table>';
+  document.getElementById('game').innerHTML=html;
+}
+
+// 胜利
 function checkWin(){
-    for(let y=0;y<height;y++){
-        for(let x=0;x<width;x++){
-            if(map[y][x]===BOX) return;
-        }
-    }
-    alert('关卡完成 🎉');
-    currentLevel++;
+  if(boxes.every(b=>b.on)){
+    alert('完成 🎉');
     generateLevel();
-    drawMap();
+  }
 }
 
-// WASD 控制
-document.addEventListener('keydown', e=>{
-    if(e.key==='w') move(0,-1);
-    else if(e.key==='s') move(0,1);
-    else if(e.key==='a') move(-1,0);
-    else if(e.key==='d') move(1,0);
+// 撤销
+function save(){
+  history.push({
+    p:{...player},
+    b:boxes.map(o=>({...o}))
+  });
+  if(history.length>50)history.shift();
+}
+
+function undo(){
+  if(history.length<2) return;
+  history.pop();
+  let s=history[history.length-1];
+  player={...s.p};
+  boxes=s.b.map(o=>({...o}));
+  draw();
+}
+
+// 重置
+function resetLevel(){
+  generateLevel();
+}
+
+// 键盘（箭头 + WASD）
+document.addEventListener('keydown',e=>{
+  if(e.key==='ArrowUp'||e.key==='w')move(0,-1);
+  if(e.key==='ArrowDown'||e.key==='s')move(0,1);
+  if(e.key==='ArrowLeft'||e.key==='a')move(-1,0);
+  if(e.key==='ArrowRight'||e.key==='d')move(1,0);
 });
 
-// 重置关卡
-function resetLevel(){
-    generateLevel();
-    drawMap();
-}
+function rand(a,b){return Math.floor(Math.random()*(b-a+1))+a;}
 
-// 初始化
 generateLevel();
-drawMap();
 </script>
 
 </body>
