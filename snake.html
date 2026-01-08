@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<title>贪吃蛇 🍏</title>
+<title>贪吃蛇 🐍</title>
 <style>
 body{text-align:center;font-family:Arial}
 canvas{border:2px solid #333;background:#fafafa}
@@ -21,7 +21,7 @@ button,select{margin:5px;padding:6px 10px;font-size:16px}
     <option value="black">黑</option>
     <option value="blue">蓝</option>
     <option value="yellow">黄</option>
-    <option value="rainbow">🌈 彩虹</option>
+    <option value="rainbow">🌈彩虹</option>
   </select>
 </div>
 
@@ -35,8 +35,8 @@ button,select{margin:5px;padding:6px 10px;font-size:16px}
 
 <button onclick="startGame()">开始</button>
 <button onclick="pauseGame()">暂停</button>
-<br>
 
+<br><br>
 <canvas id="game" width="400" height="400"></canvas>
 
 <script>
@@ -50,19 +50,17 @@ let hue=0, speed=150;
 let snakeColor="green", rainbow=false, bodyShape="square";
 let applesEaten=0;
 
-// 初始化
 function init(){
   snake=[{x:10,y:10}];
   dir={x:1,y:0};
   rocks=[];
   applesEaten=0;
   speed=150;
-  createRocks(); // 初始障碍保留
+  createRocks();
   spawnApple();
   draw();
 }
 
-// 初始障碍（不再增加）
 function createRocks(){
   for(let i=0;i<6;i++){
     let x,y;
@@ -74,21 +72,19 @@ function createRocks(){
   }
 }
 
-// 安全苹果
 function spawnApple(){
   let x,y;
   do{
     x=rand(1,cols-2);
     y=rand(1,rows-2);
-  }while(onSnake(x,y)||onRock(x,y)||nearObstacles(x,y));
+  }while(onSnake(x,y)||onRock(x,y)||nearObstacle(x,y));
   apple={x,y};
 }
 
 function onSnake(x,y){return snake.some(s=>s.x===x&&s.y===y);}
 function onRock(x,y){return rocks.some(r=>r.x===x&&r.y===y);}
 
-// 两格内 ≤1 障碍（墙算）
-function nearObstacles(x,y){
+function nearObstacle(x,y){
   let c=0;
   for(let dy=-2;dy<=2;dy++){
     for(let dx=-2;dx<=2;dx++){
@@ -101,7 +97,6 @@ function nearObstacles(x,y){
   return false;
 }
 
-// 主循环
 function loop(){
   let head={x:snake[0].x+dir.x,y:snake[0].y+dir.y};
 
@@ -120,7 +115,6 @@ function loop(){
     applesEaten++;
     spawnApple();
 
-    // ⭐ 只加速度，不加障碍
     if(applesEaten%3===0){
       speed=Math.max(60,speed-10);
       restartTimer();
@@ -133,7 +127,6 @@ function loop(){
   draw();
 }
 
-// 绘制
 function draw(){
   ctx.clearRect(0,0,400,400);
 
@@ -141,10 +134,9 @@ function draw(){
   ctx.font="18px serif";
   ctx.fillText("🍏",apple.x*size+2,apple.y*size+18);
 
-  // 🪨
-  ctx.fillStyle="#999";
+  // 🪨 障碍物（真正 emoji）
   rocks.forEach(r=>{
-    ctx.fillRect(r.x*size,r.y*size,size,size);
+    ctx.fillText("🪨", r.x*size+1, r.y*size+18);
   });
 
   // 🐍 身体
@@ -166,7 +158,6 @@ function draw(){
   drawHead();
 }
 
-// 🐍 蛇头
 function drawHead(){
   let h=snake[0];
   ctx.fillStyle=rainbow?`hsl(${hue},100%,40%)`:snakeColor;
@@ -174,13 +165,6 @@ function drawHead(){
   if(bodyShape==="circle"){
     ctx.beginPath();
     ctx.arc(h.x*size+size/2,h.y*size+size/2,size/2,0,Math.PI*2);
-    ctx.fill();
-
-    ctx.fillStyle="#fff";
-    let ex=dir.x?dir.x*4:0, ey=dir.y?dir.y*4:0;
-    ctx.beginPath();
-    ctx.arc(h.x*size+size/2+ex-3,h.y*size+size/2+ey-3,2,0,Math.PI*2);
-    ctx.arc(h.x*size+size/2+ex+3,h.y*size+size/2+ey+3,2,0,Math.PI*2);
     ctx.fill();
   }else{
     ctx.beginPath();
@@ -205,7 +189,6 @@ function drawHead(){
   }
 }
 
-// 控制
 document.addEventListener("keydown",e=>{
   if((e.key==="ArrowUp"||e.key==="w")&&dir.y!==1) dir={x:0,y:-1};
   if((e.key==="ArrowDown"||e.key==="s")&&dir.y!==-1) dir={x:0,y:1};
