@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<title>推箱子📦</title>
+<title>推箱子游戏（目标不重叠障碍）</title>
 <style>
 body{text-align:center;font-family:Arial;}
 canvas{border:2px solid #333;background:#fafafa;margin-top:10px;}
@@ -11,7 +11,7 @@ button{margin:5px;padding:6px 10px;font-size:16px;}
 </style>
 </head>
 <body>
-<h2>推箱子📦</h2>
+<h2>推箱子游戏（目标不与障碍重叠）</h2>
 <div id="controls">
   <button onclick="move('up')">⬆️</button>
   <button onclick="move('left')">⬅️</button>
@@ -32,6 +32,21 @@ let walls=[], rocks=[], targets=[], boxes=[], player;
 let history=[];
 let level=1;
 
+// -------------------- 检查格子 --------------------
+function isOccupied(x,y){
+    return walls.some(w=>w.x===x&&w.y===y)
+        || rocks.some(r=>r.x===x&&r.y===y)
+        || boxes.some(b=>b.x===x&&b.y===y && !b.locked)
+        || targets.some(t=>t.x===x && t.y===y);
+}
+function isFree(x,y){
+    if(x<0||y<0||x>=cols||y>=rows) return false;
+    if(walls.some(w=>w.x===x&&w.y===y)) return false;
+    if(rocks.some(r=>r.x===x&&r.y===y)) return false;
+    if(boxes.some(b=>b.x===x&&b.y===y && !b.locked)) return false;
+    return true;
+}
+
 // -------------------- 生成关卡 --------------------
 function generateLevel(){
     walls=[]; rocks=[]; targets=[]; boxes=[]; history=[];
@@ -46,11 +61,13 @@ function generateLevel(){
         if(!isOccupied(x,y)) rocks.push({x,y});
     }
 
-    // 随机目标
+    // 随机目标，不与障碍重叠
     while(targets.length<3){
         let x=Math.floor(Math.random()*(cols-2))+1;
         let y=Math.floor(Math.random()*(rows-2))+1;
-        if(!isOccupied(x,y)) targets.push({x,y});
+        if(!walls.some(w=>w.x===x&&w.y===y) && !rocks.some(r=>r.x===x&&r.y===y) && !targets.some(t=>t.x===x&&t.y===y)){
+            targets.push({x,y});
+        }
     }
 
     // 随机放置箱子，不在目标上
@@ -62,7 +79,7 @@ function generateLevel(){
         }
     }
 
-    // 反推生成，模拟玩家拉箱子，但起点不在目标
+    // 反推生成
     for(let i=0;i<30;i++){
         const b = boxes[Math.floor(Math.random()*boxes.length)];
         reverseMoveBox(b);
@@ -86,20 +103,6 @@ function generateLevel(){
     if(!isSolvable()){
         generateLevel();
     }
-}
-
-// -------------------- 检查格子 --------------------
-function isOccupied(x,y){
-    return walls.some(w=>w.x===x&&w.y===y)
-        || rocks.some(r=>r.x===x&&r.y===y)
-        || boxes.some(b=>b.x===x&&b.y===y && !b.locked);
-}
-function isFree(x,y){
-    if(x<0||y<0||x>=cols||y>=rows) return false;
-    if(walls.some(w=>w.x===x&&w.y===y)) return false;
-    if(rocks.some(r=>r.x===x&&r.y===y)) return false;
-    if(boxes.some(b=>b.x===x&&b.y===y && !b.locked)) return false;
-    return true;
 }
 
 // -------------------- 反推生成 --------------------
@@ -166,7 +169,7 @@ function draw(){
     ctx.fillText('🤗', player.x*size+2,player.y*size+32);
 }
 
-// -------------------- 玩家移动 --------------------
+// -------------------- 移动 --------------------
 function move(dir){
     const dx=dir==='left'?-1:dir==='right'?1:0;
     const dy=dir==='up'?-1:dir==='down'?1:0;
