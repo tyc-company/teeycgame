@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<title>推箱子游戏📦</title>
+<title>推箱子游戏（修正版）</title>
 <style>
 body{text-align:center;font-family:Arial;}
 canvas{border:2px solid #333;background:#fafafa;margin-top:10px;}
@@ -11,7 +11,7 @@ button{margin:5px;padding:6px 10px;font-size:16px;}
 </style>
 </head>
 <body>
-<h2>推箱子游戏📦</h2>
+<h2>推箱子游戏（箱子不在目标，目标不与障碍重叠）</h2>
 <div id="controls">
   <button onclick="move('up')">⬆️</button>
   <button onclick="move('left')">⬅️</button>
@@ -23,14 +23,14 @@ button{margin:5px;padding:6px 10px;font-size:16px;}
 <canvas id="game" width="400" height="400"></canvas>
 
 <script>
-const canvas=document.getElementById("game");
-const ctx=canvas.getContext("2d");
-const size=40;
-const cols=10, rows=10;
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+const size = 40;
+const cols = 10, rows = 10;
 
 let walls=[], rocks=[], targets=[], boxes=[], player;
-let history=[];
-let level=1;
+let history = [];
+let level = 1;
 
 // -------------------- 检查格子 --------------------
 function isOccupied(x,y){
@@ -50,6 +50,7 @@ function isFree(x,y){
 // -------------------- 生成关卡 --------------------
 function generateLevel(){
     walls=[]; rocks=[]; targets=[]; boxes=[]; history=[];
+    
     // 墙
     for(let i=0;i<cols;i++){ walls.push({x:i,y:0}); walls.push({x:i,y:rows-1}); }
     for(let i=0;i<rows;i++){ walls.push({x:0,y:i}); walls.push({x:cols-1,y:i}); }
@@ -61,7 +62,7 @@ function generateLevel(){
         if(!isOccupied(x,y)) rocks.push({x,y});
     }
 
-    // 随机目标，不与障碍重叠
+    // 随机目标，不与障碍物或墙重叠
     while(targets.length<3){
         let x=Math.floor(Math.random()*(cols-2))+1;
         let y=Math.floor(Math.random()*(rows-2))+1;
@@ -71,18 +72,18 @@ function generateLevel(){
     }
 
     // 随机放置箱子，不在目标上
-    while(boxes.length<targets.length){
+    while(boxes.length < targets.length){
         let x=Math.floor(Math.random()*(cols-2))+1;
         let y=Math.floor(Math.random()*(rows-2))+1;
-        if(!isOccupied(x,y) && !targets.some(t=>t.x===x&&t.y===y)){
+        if(isFree(x,y) && !targets.some(t=>t.x===x&&t.y===y)){
             boxes.push({x,y,locked:false});
         }
     }
 
-    // 反推生成
+    // 模拟反推生成，保持箱子起始位置不在目标
     for(let i=0;i<30;i++){
         const b = boxes[Math.floor(Math.random()*boxes.length)];
-        reverseMoveBox(b);
+        simulatePullPath(b);
     }
 
     // 玩家随机放置在空地
@@ -99,14 +100,14 @@ function generateLevel(){
         player={x:1,y:1};
     }
 
-    // 检查可通关
+    // BFS检测可通关
     if(!isSolvable()){
         generateLevel();
     }
 }
 
-// -------------------- 反推生成 --------------------
-function reverseMoveBox(box){
+// -------------------- 模拟反推路径 --------------------
+function simulatePullPath(box){
     const dirs=[{x:0,y:-1},{x:0,y:1},{x:-1,y:0},{x:1,y:0}];
     dirs.sort(()=>Math.random()-0.5);
     for(let d of dirs){
@@ -115,7 +116,9 @@ function reverseMoveBox(box){
         const boxX = box.x + d.x;
         const boxY = box.y + d.y;
         if(isFree(boxX,boxY) && isFree(playerX,playerY)){
-            box.x=boxX; box.y=boxY;
+            // 仅模拟可通关路径，不直接移动到目标
+            box.x = boxX;
+            box.y = boxY;
             return true;
         }
     }
@@ -139,16 +142,16 @@ function isSolvable(){
             if(nx<0||ny<0||nx>=cols||ny>=rows) continue;
             if(walls.some(w=>w.x===nx&&w.y===ny) || rocks.some(r=>r.x===nx&&r.y===ny)) continue;
             let boxIdx = boxStates.findIndex(b=>b.x===nx && b.y===ny && !b.locked);
-            let newBoxes=boxStates.map(b=>({...b}));
+            let newBoxes = boxStates.map(b=>({...b}));
             if(boxIdx!==-1){
-                let nbx=newBoxes[boxIdx].x+m.dx;
-                let nby=newBoxes[boxIdx].y+m.dy;
+                let nbx=newBoxes[boxIdx].x + m.dx;
+                let nby=newBoxes[boxIdx].y + m.dy;
                 if(!isFree(nbx,nby)) continue;
-                newBoxes[boxIdx].x=nbx;
-                newBoxes[boxIdx].y=nby;
-                if(targets.some(t=>t.x===nbx && t.y===nby)) newBoxes[boxIdx].locked=true;
+                newBoxes[boxIdx].x = nbx;
+                newBoxes[boxIdx].y = nby;
+                if(targets.some(t=>t.x===nbx && t.y===nby)) newBoxes[boxIdx].locked = true;
             }
-            let key=stateKey(nx,ny,newBoxes);
+            let key = stateKey(nx,ny,newBoxes);
             if(!visited.has(key)){
                 visited.add(key);
                 queue.push({px:nx,py:ny,boxStates:newBoxes});
@@ -171,24 +174,27 @@ function draw(){
 
 // -------------------- 移动 --------------------
 function move(dir){
-    const dx=dir==='left'?-1:dir==='right'?1:0;
-    const dy=dir==='up'?-1:dir==='down'?1:0;
-    const newX=player.x+dx;
-    const newY=player.y+dy;
+    const dx = dir==='left'?-1:dir==='right'?1:0;
+    const dy = dir==='up'?-1:dir==='down'?1:0;
+    const newX = player.x + dx;
+    const newY = player.y + dy;
     if(walls.some(w=>w.x===newX&&w.y===newY) || rocks.some(r=>r.x===newX&&r.y===newY)) return;
     let boxIndex = boxes.findIndex(b=>b.x===newX&&b.y===newY && !b.locked);
     if(boxIndex!==-1){
         let box = boxes[boxIndex];
-        let nextX = box.x+dx;
-        let nextY = box.y+dy;
+        let nextX = box.x + dx;
+        let nextY = box.y + dy;
         if(isOccupied(nextX,nextY)) return;
         history.push({player:{...player}, boxes:boxes.map(b=>({...b}))});
-        box.x=nextX; box.y=nextY;
-        if(targets.some(t=>t.x===nextX && t.y===nextY)) box.locked=true;
-        player.x=newX; player.y=newY;
-    }else{
+        box.x = nextX;
+        box.y = nextY;
+        if(targets.some(t=>t.x===nextX && t.y===nextY)) box.locked = true;
+        player.x = newX;
+        player.y = newY;
+    } else {
         history.push({player:{...player}, boxes:boxes.map(b=>({...b}))});
-        player.x=newX; player.y=newY;
+        player.x = newX;
+        player.y = newY;
     }
     draw();
     if(checkWin()) setTimeout(nextLevel,100);
