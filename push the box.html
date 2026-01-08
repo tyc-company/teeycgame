@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<title>推箱子📦</title>
+<title>推箱子-正义之橙制作</title>
 <style>
 body{text-align:center;font-family:Arial;}
 canvas{border:2px solid #333;background:#fafafa;margin-top:10px;}
@@ -11,7 +11,7 @@ button{margin:5px;padding:6px 10px;font-size:16px;}
 </style>
 </head>
 <body>
-<h2>规则：用🤗把📦推到❌</h2>
+<h2>推箱子📦-正义之橙制作</h2>
 <div id="controls">
   <button onclick="move('up')">⬆️</button>
   <button onclick="move('left')">⬅️</button>
@@ -53,34 +53,47 @@ function generateLevel(){
         if(!isOccupied(x,y)) targets.push({x,y});
     }
 
-    // 箱子放在目标上
-    boxes = targets.map(t=>({x:t.x,y:t.y,locked:false}));
+    // 随机放置箱子，不在目标上
+    while(boxes.length<targets.length){
+        let x=Math.floor(Math.random()*(cols-2))+1;
+        let y=Math.floor(Math.random()*(rows-2))+1;
+        if(!isOccupied(x,y) && !targets.some(t=>t.x===x&&t.y===y)){
+            boxes.push({x,y,locked:false});
+        }
+    }
 
-    // 反推生成，保证玩家能拉动
+    // 反推生成，模拟玩家拉箱子，但起点不在目标
     for(let i=0;i<30;i++){
         const b = boxes[Math.floor(Math.random()*boxes.length)];
         reverseMoveBox(b);
     }
 
-    // 玩家随机放置在可达空格
-    do{
-        player={x:Math.floor(Math.random()*(cols-2))+1,y:Math.floor(Math.random()*(rows-2))+1};
-    }while(isOccupied(player.x,player.y));
+    // 玩家随机放置在空地
+    let freeSpots = [];
+    for(let x=1;x<cols-1;x++){
+        for(let y=1;y<rows-1;y++){
+            if(isFree(x,y)) freeSpots.push({x,y});
+        }
+    }
+    if(freeSpots.length>0){
+        const p = freeSpots[Math.floor(Math.random()*freeSpots.length)];
+        player = {x:p.x,y:p.y};
+    } else {
+        player={x:1,y:1};
+    }
 
-    // 确保关卡可通关
+    // 检查可通关
     if(!isSolvable()){
-        generateLevel(); // 不可通关，重新生成
+        generateLevel();
     }
 }
 
-// -------------------- 检查格子是否被占用 --------------------
+// -------------------- 检查格子 --------------------
 function isOccupied(x,y){
     return walls.some(w=>w.x===x&&w.y===y)
         || rocks.some(r=>r.x===x&&r.y===y)
         || boxes.some(b=>b.x===x&&b.y===y && !b.locked);
 }
-
-// -------------------- 检查格子是否空 --------------------
 function isFree(x,y){
     if(x<0||y<0||x>=cols||y>=rows) return false;
     if(walls.some(w=>w.x===x&&w.y===y)) return false;
@@ -106,10 +119,9 @@ function reverseMoveBox(box){
     return false;
 }
 
-// -------------------- 检查关卡是否可通关 --------------------
+// -------------------- BFS检查可通关 --------------------
 function isSolvable(){
-    // BFS模拟玩家推箱子
-    let queue=[{px:player.x, py:player.y, boxStates: boxes.map(b=>({...b}))}];
+    let queue=[{px:player.x,py:player.y, boxStates: boxes.map(b=>({...b}))}];
     let visited = new Set();
     function stateKey(px,py,boxes){
         return px+","+py+"|"+boxes.map(b=>b.x+","+b.y).join(';');
@@ -154,7 +166,7 @@ function draw(){
     ctx.fillText('🤗', player.x*size+2,player.y*size+32);
 }
 
-// -------------------- 移动 --------------------
+// -------------------- 玩家移动 --------------------
 function move(dir){
     const dx=dir==='left'?-1:dir==='right'?1:0;
     const dy=dir==='up'?-1:dir==='down'?1:0;
@@ -215,7 +227,7 @@ document.addEventListener("keydown",e=>{
     if(e.key==='ArrowRight'||e.key==='d') move('right');
 });
 
-// -------------------- 初始化 --------------------
+// 初始化
 generateLevel();
 draw();
 </script>
