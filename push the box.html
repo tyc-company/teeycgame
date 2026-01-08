@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<title>推箱子游戏</title>
+<title>推箱子📦</title>
 <style>
 body{text-align:center;font-family:Arial}
 canvas{border:2px solid #333;background:#fafafa;margin-top:10px;}
@@ -11,8 +11,7 @@ button{margin:5px;padding:6px 10px;font-size:16px;}
 </style>
 </head>
 <body>
-<h2>推箱子游戏</h2>
-
+<h2>来推箱子</h2>
 <div id="controls">
   <button onclick="move('up')">⬆️</button>
   <button onclick="move('left')">⬅️</button>
@@ -21,7 +20,6 @@ button{margin:5px;padding:6px 10px;font-size:16px;}
   <button onclick="undo()">↩️上一步</button>
   <button onclick="resetLevel()">🔄 重置</button>
 </div>
-
 <canvas id="game" width="400" height="400"></canvas>
 
 <script>
@@ -34,15 +32,10 @@ let walls=[], rocks=[], targets=[], boxes=[], player;
 let history=[];
 let level=1;
 
-// 初始化关卡
+// -------------------- 生成关卡 --------------------
 function generateLevel(){
-    walls = [];
-    rocks = [];
-    targets = [];
-    boxes = [];
-    history = [];
-
-    // 墙边
+    walls=[]; rocks=[]; targets=[]; boxes=[]; history=[];
+    // 墙
     for(let i=0;i<cols;i++){ walls.push({x:i,y:0}); walls.push({x:i,y:rows-1}); }
     for(let i=0;i<rows;i++){ walls.push({x:0,y:i}); walls.push({x:cols-1,y:i}); }
 
@@ -60,18 +53,18 @@ function generateLevel(){
         if(!isOccupied(x,y)) targets.push({x,y});
     }
 
-    // 箱子放在目标上
-    boxes = targets.map(t=>({x:t.x,y:t.y}));
+    // 箱子初始放在目标上，标记 locked=false
+    boxes = targets.map(t=>({x:t.x,y:t.y,locked:false}));
 
-    // 反向拉箱子生成
+    // 反推式生成
     for(let i=0;i<30;i++){
         const b = boxes[Math.floor(Math.random()*boxes.length)];
         reverseMoveBox(b);
     }
 
-    // 玩家放在空地
+    // 玩家放空地
     do{
-        player = {x: Math.floor(Math.random()*(cols-2))+1, y: Math.floor(Math.random()*(rows-2))+1};
+        player={x:Math.floor(Math.random()*(cols-2))+1,y:Math.floor(Math.random()*(rows-2))+1};
     }while(isOccupied(player.x,player.y));
 }
 
@@ -82,23 +75,26 @@ function isOccupied(x,y){
         || boxes.some(b=>b.x===x&&b.y===y);
 }
 
-// 判断是否可移动
-function canMove(x,y){
+// 判断格子是否为空（可移动）
+function isFree(x,y){
+    if(x<0||y<0||x>=cols||y>=rows) return false;
     if(walls.some(w=>w.x===x&&w.y===y)) return false;
     if(rocks.some(r=>r.x===x&&r.y===y)) return false;
+    if(boxes.some(b=>b.x===x&&b.y===y && !b.locked)) return false;
     return true;
 }
 
-// 反向移动箱子
+// -------------------- 反推拉箱子 --------------------
 function reverseMoveBox(box){
     const dirs=[{x:0,y:-1},{x:0,y:1},{x:-1,y:0},{x:1,y:0}];
-    dirs.sort(()=>Math.random()-0.5);
+    dirs.sort(()=>Math.random()-0.5); // 随机顺序
     for(let d of dirs){
         const fromX = box.x + d.x;
         const fromY = box.y + d.y;
         const pushX = box.x - d.x;
         const pushY = box.y - d.y;
         if(isFree(fromX,fromY) && isFree(pushX,pushY)){
+            // 模拟有人从pushX,pushY站位拉箱子到fromX,fromY
             box.x = fromX;
             box.y = fromY;
             return true;
@@ -107,40 +103,30 @@ function reverseMoveBox(box){
     return false;
 }
 
-function isFree(x,y){
-    if(x<0||y<0||x>=cols||y>=rows) return false;
-    if(walls.some(w=>w.x===x&&w.y===y)) return false;
-    if(rocks.some(r=>r.x===x&&r.y===y)) return false;
-    if(boxes.some(b=>b.x===x&&b.y===y)) return false;
-    return true;
-}
-
-// 绘制
+// -------------------- 绘制 --------------------
 function draw(){
     ctx.clearRect(0,0,canvas.width,canvas.height);
-    // 墙
     ctx.font="32px serif";
     walls.forEach(w=>ctx.fillText('🧱', w.x*size+2,w.y*size+32));
-    // 障碍
     rocks.forEach(r=>ctx.fillText('🪨', r.x*size+2,r.y*size+32));
-    // 目标
     targets.forEach(t=>ctx.fillText('❌', t.x*size+2,t.y*size+32));
-    // 箱子
-    boxes.forEach(b=>ctx.fillText('📦', b.x*size+2,b.y*size+32));
-    // 玩家
+    boxes.forEach(b=>{
+        ctx.fillText('📦', b.x*size+2,b.y*size+32);
+    });
     ctx.fillText('🤗', player.x*size+2,player.y*size+32);
 }
 
-// 移动
+// -------------------- 移动 --------------------
 function move(dir){
-    const dx = dir==='left'?-1:dir==='right'?1:0;
-    const dy = dir==='up'?-1:dir==='down'?1:0;
-    const newX = player.x + dx;
-    const newY = player.y + dy;
+    const dx=dir==='left'?-1:dir==='right'?1:0;
+    const dy=dir==='up'?-1:dir==='down'?1:0;
+    const newX=player.x+dx;
+    const newY=player.y+dy;
 
+    // 墙/障碍物
     if(walls.some(w=>w.x===newX&&w.y===newY) || rocks.some(r=>r.x===newX&&r.y===newY)) return;
 
-    let boxIndex = boxes.findIndex(b=>b.x===newX&&b.y===newY);
+    let boxIndex = boxes.findIndex(b=>b.x===newX&&b.y===newY && !b.locked);
     if(boxIndex!==-1){
         let box = boxes[boxIndex];
         let nextX = box.x + dx;
@@ -153,6 +139,10 @@ function move(dir){
         });
         box.x = nextX;
         box.y = nextY;
+        // 如果到目标，锁定
+        if(targets.some(t=>t.x===box.x&&t.y===box.y)){
+            box.locked = true;
+        }
         player.x = newX;
         player.y = newY;
     }else{
@@ -167,40 +157,27 @@ function move(dir){
     if(checkWin()) setTimeout(nextLevel,100);
 }
 
-// 上一步
+// -------------------- 上一步 --------------------
 function undo(){
     if(history.length===0) return;
     const last = history.pop();
-    player = {...last.player};
+    player={...last.player};
     boxes = last.boxes.map(b=>({...b}));
     draw();
 }
 
-// 重置关卡
+// -------------------- 重置关卡 --------------------
 function resetLevel(){
     generateLevel();
     draw();
 }
 
-// 检查箱子是否在死角
-function isBoxStuck(box){
-    if(targets.some(t=>t.x===box.x && t.y===box.y)) return false;
-    const up = walls.concat(rocks).some(w=>w.x===box.x && w.y===box.y-1);
-    const down = walls.concat(rocks).some(w=>w.x===box.x && w.y===box.y+1);
-    const left = walls.concat(rocks).some(w=>w.x===box.x-1 && w.y===box.y);
-    const right = walls.concat(rocks).some(w=>w.x===box.x+1 && w.y===box.y);
-    if((up&&left)||(up&&right)||(down&&left)||(down&&right)) return true;
-    return false;
-}
-
-// 通关检查
+// -------------------- 通关检测 --------------------
 function checkWin(){
-    if(!boxes.every(b=>targets.some(t=>t.x===b.x&&t.y===b.y))) return false;
-    for(let b of boxes) if(isBoxStuck(b)) return false;
-    return true;
+    return boxes.every(b => targets.some(t=>t.x===b.x && t.y===b.y));
 }
 
-// 下一关
+// -------------------- 下一关 --------------------
 function nextLevel(){
     level++;
     alert("通关！进入第"+level+"关");
@@ -208,7 +185,7 @@ function nextLevel(){
     draw();
 }
 
-// 键盘控制
+// -------------------- 键盘控制 --------------------
 document.addEventListener("keydown",e=>{
     if(e.key==='ArrowUp'||e.key==='w') move('up');
     if(e.key==='ArrowDown'||e.key==='s') move('down');
@@ -216,6 +193,7 @@ document.addEventListener("keydown",e=>{
     if(e.key==='ArrowRight'||e.key==='d') move('right');
 });
 
+// -------------------- 初始化 --------------------
 generateLevel();
 draw();
 </script>
