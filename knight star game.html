@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8" />
+<title>骑士走星棋游戏</title>
+<style>
+  body { font-family: Arial, sans-serif; text-align: center; }
+  #board {
+    display: grid;
+    grid-template-columns: repeat(6, 70px);
+    grid-template-rows: repeat(6, 70px);
+    gap: 4px;
+    justify-content: center;
+    margin: 20px auto;
+  }
+  .cell {
+    width: 70px;
+    height: 70px;
+    background: #bbdefb;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 28px;
+    cursor: pointer;
+    border-radius: 6px;
+  }
+  .blocked {
+    background: #eeeeee;
+    cursor: not-allowed;
+  }
+  .visited {
+    background: #81c784;
+  }
+  .highlight {
+    background: #ffd54f;
+  }
+</style>
+</head>
+
+<body>
+
+<h2>骑士走星棋（Knight Star Game）</h2>
+<p>只能在 ⭐ 上移动骑士 ♞，尽量走最多步</p>
+
+<div id="info">
+  当前步数：<span id="score">0</span>
+</div>
+
+<div id="board"></div>
+
+<button onclick="resetGame()">↻ 重置</button>
+
+<script>
+const rows = 6, cols = 6;
+
+// 星星布局（与你原始代码一致）
+const boardMap = [
+  "*OO**O",
+  "O***OO",
+  "******",
+  "****O*",
+  "*O***O",
+  "O****O"
+];
+
+const knightMoves = [
+  [-1,  2], [1,  2], [2,  1], [2, -1],
+  [-1, -2], [1, -2], [-2, 1], [-2, -1]
+];
+
+let board = [];
+let visited = [];
+let currentPos = null;
+let moveCount = 0;
+
+const boardDiv = document.getElementById("board");
+const scoreSpan = document.getElementById("score");
+
+function resetGame() {
+  board = [];
+  visited = Array(rows).fill().map(() => Array(cols).fill(false));
+  currentPos = null;
+  moveCount = 0;
+  scoreSpan.textContent = "0";
+  drawBoard();
+}
+
+function drawBoard() {
+  boardDiv.innerHTML = "";
+  for (let y = 0; y < rows; y++) {
+    for (let x = 0; x < cols; x++) {
+      const cell = document.createElement("div");
+      cell.className = "cell";
+
+      if (boardMap[y][x] === "O") {
+        cell.classList.add("blocked");
+      } else {
+        cell.textContent = "⭐";
+        cell.onclick = () => onCellClick(x, y);
+      }
+
+      if (visited[y][x]) {
+        cell.classList.add("visited");
+        cell.textContent = moveCountAt(x, y);
+      }
+
+      boardDiv.appendChild(cell);
+    }
+  }
+  highlightMoves();
+}
+
+let moveOrder = [];
+
+function moveCountAt(x, y) {
+  const idx = moveOrder.findIndex(p => p.x === x && p.y === y);
+  return idx >= 0 ? idx + 1 : "";
+}
+
+function onCellClick(x, y) {
+  if (boardMap[y][x] === "O") return;
+
+  if (currentPos) {
+    const dx = Math.abs(x - currentPos.x);
+    const dy = Math.abs(y - currentPos.y);
+    if (!((dx === 1 && dy === 2) || (dx === 2 && dy === 1))) {
+      alert("非法骑士移动！");
+      return;
+    }
+    if (visited[y][x]) {
+      alert("这个星已经走过了！");
+      return;
+    }
+  }
+
+  visited[y][x] = true;
+  moveOrder.push({x, y});
+  currentPos = {x, y};
+  moveCount++;
+  scoreSpan.textContent = moveCount;
+
+  drawBoard();
+
+  if (!hasNextMove()) {
+    alert("游戏结束！你的得分是：" + moveCount);
+  }
+}
+
+function hasNextMove() {
+  if (!currentPos) return true;
+  for (const [dx, dy] of knightMoves) {
+    const nx = currentPos.x + dx;
+    const ny = currentPos.y + dy;
+    if (
+      nx >= 0 && nx < cols &&
+      ny >= 0 && ny < rows &&
+      boardMap[ny][nx] === "*" &&
+      !visited[ny][nx]
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function highlightMoves() {
+  if (!currentPos) return;
+  const cells = document.querySelectorAll(".cell");
+  knightMoves.forEach(([dx, dy]) => {
+    const nx = currentPos.x + dx;
+    const ny = currentPos.y + dy;
+    if (
+      nx >= 0 && nx < cols &&
+      ny >= 0 && ny < rows &&
+      boardMap[ny][nx] === "*" &&
+      !visited[ny][nx]
+    ) {
+      const idx = ny * cols + nx;
+      cells[idx].classList.add("highlight");
+    }
+  });
+}
+
+resetGame();
+</script>
+
+</body>
+</html>
