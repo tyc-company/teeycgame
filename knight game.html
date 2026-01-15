@@ -1,26 +1,60 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <title>骑士走棋</title>
-    <link rel="stylesheet" href="style.css">
+<meta charset="UTF-8">
+<title>骑士游戏合集</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    text-align: center;
+    background: #f0f4f8;
+    padding: 20px;
+  }
+  h1 { color: #1565c0; }
+  .game-item {
+    margin: 12px;
+    padding: 12px 18px;
+    border: 2px solid #1565c0;
+    border-radius: 8px;
+    background: #e3f2fd;
+    display: inline-block;
+    transition: all 0.2s;
+  }
+  .game-item:hover {
+    background: #bbdefb;
+    transform: scale(1.05);
+  }
+  a {
+    text-decoration: none;
+    color: #0d47a1;
+    font-weight: bold;
+    font-size: 18px;
+  }
+</style>
 </head>
 <body>
-    <h1>使用马的走法走（L形）</h1>
-    <div id="knight game-list"></div>
 
-    <script>
-        fetch('knight.json')
-        .then(res => res.json())
-        .then(games => {
-            const container = document.getElementById('knight-game-list');
-            games.forEach(game => {
-                const div = document.createElement('div');
-                div.className = 'knight-game-item';
-                div.innerHTML = `<a href="${game.url}" target="_blank">${game.name}</a>`;
-                container.appendChild(div);
-            });
-        });
-    </script>
+<h1>骑士游戏合集</h1>
+<p>点击下方游戏名称进入对应小游戏</p>
+
+<div id="game-list"></div>
+
+<script>
+// 游戏列表数据，直接写在 JS 里
+const games = [
+  { name: "骑士走星棋", url: "knight star game.html" },
+];
+
+const container = document.getElementById('game-list');
+
+games.forEach(game => {
+  const div = document.createElement('div');
+  div.className = 'game-item';
+  div.innerHTML = `<a href="${game.url}" target="_blank">${game.name}</a>`;
+  container.appendChild(div);
+});
+</script>
+
 </body>
 </html>
+
