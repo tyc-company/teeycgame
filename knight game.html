@@ -13,10 +13,10 @@
         fetch('knight.json')
         .then(res => res.json())
         .then(games => {
-            const container = document.getElementById('knight game-list');
+            const container = document.getElementById('knight-game-list');
             games.forEach(game => {
                 const div = document.createElement('div');
-                div.className = 'knight game-item';
+                div.className = 'knight-game-item';
                 div.innerHTML = `<a href="${game.url}" target="_blank">${game.name}</a>`;
                 container.appendChild(div);
             });
