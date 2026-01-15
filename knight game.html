@@ -2,57 +2,91 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<title>骑士游戏合集</title>
+<title>骑士游戏网站</title>
 <style>
-  body {
-    font-family: Arial, sans-serif;
-    text-align: center;
-    background: #f0f4f8;
-    padding: 20px;
-  }
-  h1 { color: #1565c0; }
-  .game-item {
-    margin: 12px;
-    padding: 12px 18px;
-    border: 2px solid #1565c0;
-    border-radius: 8px;
-    background: #e3f2fd;
-    display: inline-block;
-    transition: all 0.2s;
-  }
-  .game-item:hover {
-    background: #bbdefb;
-    transform: scale(1.05);
-  }
-  a {
-    text-decoration: none;
-    color: #0d47a1;
-    font-weight: bold;
-    font-size: 18px;
-  }
+body {
+  font-family: Arial, sans-serif;
+  text-align: center;
+  background: #f0f4f8;
+  padding: 20px;
+}
+h1 { color: #1565c0; margin-bottom: 10px; }
+p { margin-bottom: 30px; }
+
+#game-list {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 20px;
+}
+
+.game-item {
+  width: 180px;
+  padding: 10px;
+  border: 2px solid #1565c0;
+  border-radius: 8px;
+  background: #e3f2fd;
+  cursor: grab;
+  transition: all 0.2s;
+}
+.game-item:hover { background: #bbdefb; transform: scale(1.05); }
+
+.game-item img {
+  width: 100%;
+  border-radius: 6px;
+}
+.game-item a {
+  display: block;
+  text-decoration: none;
+  color: #0d47a1;
+  font-weight: bold;
+  margin-top: 8px;
+  font-size: 16px;
+}
+.score {
+  margin-top: 4px;
+  font-size: 14px;
+  color: #1565c0;
+}
 </style>
 </head>
 <body>
 
-<h1>骑士游戏合集</h1>
-<p>所有游戏使用马的走法</p>
+<h1>骑士游戏网站</h1>
+<p>点击游戏进入，拖拽排序你喜欢的游戏</p>
 
 <div id="game-list"></div>
 
 <script>
-// 游戏列表数据，直接写在 JS 里
+// 游戏列表数据
 const games = [
-  { name: "骑士走星棋", url: "knight star game.html" },
+  { 
+    name: "骑士走星棋", 
+    url: "knight_star_game.html", 
+    img: "https://i.imgur.com/2V4y3sW.png", 
+    highscore: 0 
+  },
+
 ];
 
 const container = document.getElementById('game-list');
 
-games.forEach(game => {
+games.forEach((game, index) => {
   const div = document.createElement('div');
   div.className = 'game-item';
-  div.innerHTML = `<a href="${game.url}" target="_blank">${game.name}</a>`;
+  div.draggable = true;
+  div.dataset.index = index;
+  div.innerHTML = `
+    <a href="${game.url}" target="_blank">
+      <img src="${game.img}" alt="${game.name}">
+      ${game.name}
+    </a>
+    <div class="score">最高分: <span>${game.highscore}</span></div>
+  `;
   container.appendChild(div);
 });
+
+
 </script>
 
 </body>
