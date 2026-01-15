@@ -1,0 +1,335 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Chinese Typing Defense</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+<!-- Font -->
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;700&display=swap" rel="stylesheet">
+
+<!-- Tailwind (optional, mainly for reset / utility) -->
+<script src="https://cdn.tailwindcss.com"></script>
+
+<style>
+/* ===================================
+   CHINESE TYPING DEFENSE - STYLES
+   =================================== */
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: 'Noto Sans SC', sans-serif;
+  background: #0a0a0a;
+  overflow: hidden;
+}
+
+/* Container */
+.game-container {
+  width: 100%;
+  height: 90vh;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(180deg, #0a0a0a 0%, #1a0a2e 50%, #0a0a0a 100%);
+  position: relative;
+}
+
+/* Stats */
+.stats-bar {
+  display: flex;
+  justify-content: space-around;
+  padding: 8px;
+  background: rgba(0,0,0,0.7);
+  border-bottom: 2px solid #00ffff;
+}
+
+.stat-label {
+  font-size: 10px;
+  color: #00ffff;
+  font-weight: 700;
+}
+
+.stat-value {
+  font-size: 20px;
+  color: #fff;
+  text-shadow: 0 0 10px #00ffff;
+}
+
+/* Game View */
+.game-view {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Falling Characters */
+.falling-char {
+  position: absolute;
+  font-size: 36px;
+  font-weight: 700;
+  color: #ff00ff;
+  text-shadow: 0 0 20px #ff00ff;
+  animation: glow 2s infinite;
+}
+
+@keyframes glow {
+  50% { text-shadow: 0 0 40px #ff00ff; }
+}
+
+.pinyin-label {
+  position: absolute;
+  top: -20px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 12px;
+  color: #00ffff;
+}
+
+/* Input */
+.input-area {
+  padding: 12px;
+  background: rgba(0,0,0,0.8);
+  border-top: 2px solid #00ff00;
+}
+
+.pinyin-input {
+  width: 100%;
+  padding: 12px;
+  font-size: 20px;
+  text-align: center;
+  background: #000;
+  border: 2px solid #00ffff;
+  color: #fff;
+  border-radius: 8px;
+}
+
+.pinyin-input:focus {
+  border-color: #00ff00;
+}
+
+/* Effects */
+@keyframes shake {
+  25% { transform: translateX(-6px); }
+  75% { transform: translateX(6px); }
+}
+
+.shake { animation: shake 0.3s; border-color: red; }
+
+@keyframes destroy {
+  to { opacity: 0; transform: scale(2) rotate(360deg); }
+}
+
+.destroying { animation: destroy 0.4s forwards; }
+
+/* Overlay */
+.game-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.95);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 10;
+}
+
+.hidden { display: none; }
+
+.overlay-title {
+  font-size: 48px;
+  color: #ff00ff;
+  text-shadow: 0 0 30px #ff00ff;
+}
+
+.restart-btn {
+  margin-top: 20px;
+  padding: 14px 40px;
+  font-size: 18px;
+  background: linear-gradient(135deg, #00ffff, #00ff00);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+</style>
+</head>
+
+<body>
+<div class="game-container">
+
+  <div class="stats-bar">
+    <div><div class="stat-label">SCORE</div><div id="score" class="stat-value">0</div></div>
+    <div><div class="stat-label">HIGH</div><div id="highScore" class="stat-value">0</div></div>
+    <div><div class="stat-label">LEVEL</div><div id="level" class="stat-value">1</div></div>
+    <div><div class="stat-label">COMBO</div><div id="combo" class="stat-value">0</div></div>
+  </div>
+
+  <div id="gameView" class="game-view"></div>
+
+  <div class="input-area">
+    <div class="text-center text-green-400 mb-2">TYPE THE PINYIN!</div>
+    <input id="pinyinInput" class="pinyin-input" autocomplete="off" />
+  </div>
+
+  <div id="startOverlay" class="game-overlay">
+    <div class="text-center">
+      <h1 class="overlay-title">汉字防御战</h1>
+      <p class="text-cyan-400 mt-2">CHINESE TYPING DEFENSE</p>
+      <button id="startBtn" class="restart-btn">START</button>
+    </div>
+  </div>
+
+  <div id="gameOverlay" class="game-overlay hidden">
+    <div class="text-center">
+      <h1 class="overlay-title">GAME OVER</h1>
+      <p class="text-green-400 mt-2">Score: <span id="finalScore"></span></p>
+      <p class="text-green-400">High: <span id="finalHighScore"></span></p>
+      <button id="restartBtn" class="restart-btn">PLAY AGAIN</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* ===================================
+   GAME LOGIC
+   =================================== */
+
+const vocabList = [
+  { hanzi: "快乐", pinyin: "kuaile" },
+  { hanzi: "学校", pinyin: "xuexiao" },
+  { hanzi: "努力", pinyin: "nuli" },
+  { hanzi: "朋友", pinyin: "pengyou" },
+  { hanzi: "老师", pinyin: "laoshi" },
+  { hanzi: "学生", pinyin: "xuesheng" }
+];
+
+const state = {
+  score: 0,
+  high: 0,
+  level: 1,
+  combo: 0,
+  playing: false,
+  chars: [],
+  spawnRate: 2000,
+  speed: 1,
+  lastSpawn: 0
+};
+
+const el = {
+  gameView: document.getElementById("gameView"),
+  input: document.getElementById("pinyinInput"),
+  score: document.getElementById("score"),
+  high: document.getElementById("highScore"),
+  level: document.getElementById("level"),
+  combo: document.getElementById("combo"),
+  start: document.getElementById("startBtn"),
+  restart: document.getElementById("restartBtn"),
+  startOverlay: document.getElementById("startOverlay"),
+  gameOverlay: document.getElementById("gameOverlay"),
+  finalScore: document.getElementById("finalScore"),
+  finalHigh: document.getElementById("finalHighScore")
+};
+
+el.start.onclick = el.restart.onclick = startGame;
+el.input.oninput = handleInput;
+
+state.high = Number(localStorage.getItem("high") || 0);
+el.high.textContent = state.high;
+
+function startGame() {
+  Object.assign(state, {
+    score: 0, level: 1, combo: 0,
+    playing: true, chars: [],
+    spawnRate: 2000, speed: 1,
+    lastSpawn: Date.now()
+  });
+  el.gameView.innerHTML = "";
+  el.input.value = "";
+  el.startOverlay.classList.add("hidden");
+  el.gameOverlay.classList.add("hidden");
+  loop();
+}
+
+function loop() {
+  if (!state.playing) return;
+  const now = Date.now();
+  if (now - state.lastSpawn > state.spawnRate) {
+    spawnChar();
+    state.lastSpawn = now;
+  }
+  updateChars();
+  requestAnimationFrame(loop);
+}
+
+function spawnChar() {
+  const v = vocabList[Math.floor(Math.random() * vocabList.length)];
+  const d = document.createElement("div");
+  d.className = "falling-char";
+  d.textContent = v.hanzi;
+  const p = document.createElement("div");
+  p.className = "pinyin-label";
+  p.textContent = v.pinyin;
+  d.appendChild(p);
+  d.style.left = Math.random() * (el.gameView.offsetWidth - 60) + "px";
+  el.gameView.appendChild(d);
+  state.chars.push({ el: d, pinyin: v.pinyin, y: 0 });
+}
+
+function updateChars() {
+  const h = el.gameView.offsetHeight;
+  for (let i = state.chars.length - 1; i >= 0; i--) {
+    const c = state.chars[i];
+    c.y += state.speed;
+    c.el.style.top = c.y + "px";
+    if (c.y > h - 60) return gameOver();
+  }
+}
+
+function handleInput(e) {
+  const val = e.target.value.trim().toLowerCase();
+  if (!val) return;
+  const idx = state.chars.findIndex(c => c.pinyin === val);
+  if (idx >= 0) {
+    const c = state.chars[idx];
+    c.el.classList.add("destroying");
+    setTimeout(() => c.el.remove(), 300);
+    state.chars.splice(idx, 1);
+    state.score += 10 * state.level;
+    state.combo++;
+    e.target.value = "";
+    levelCheck();
+    updateUI();
+  } else if (val.length > 5) {
+    e.target.classList.add("shake");
+    setTimeout(() => e.target.classList.remove("shake"), 300);
+  }
+}
+
+function levelCheck() {
+  const nl = Math.floor(state.score / 100) + 1;
+  if (nl > state.level) {
+    state.level = nl;
+    state.spawnRate = Math.max(800, 2000 - nl * 150);
+    state.speed = 1 + nl * 0.2;
+  }
+}
+
+function updateUI() {
+  el.score.textContent = state.score;
+  el.level.textContent = state.level;
+  el.combo.textContent = state.combo;
+  if (state.score > state.high) {
+    state.high = state.score;
+    localStorage.setItem("high", state.high);
+    el.high.textContent = state.high;
+  }
+}
+
+function gameOver() {
+  state.playing = false;
+  el.finalScore.textContent = state.score;
+  el.finalHigh.textContent = state.high;
+  el.gameOverlay.classList.remove("hidden");
+}
+</script>
+</body>
+</html>
