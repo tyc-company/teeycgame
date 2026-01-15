@@ -2,7 +2,7 @@
 <html lang="zh">
 <head>
 <meta charset="UTF-8" />
-<title>骑士走星棋游戏</title>
+<title>骑士走星棋</title>
 <style>
   body { font-family: Arial, sans-serif; text-align: center; }
   #board {
@@ -24,36 +24,25 @@
     cursor: pointer;
     border-radius: 6px;
   }
-  .blocked {
-    background: #eeeeee;
-    cursor: not-allowed;
-  }
-  .visited {
-    background: #81c784;
-  }
-  .highlight {
-    background: #ffd54f;
-  }
+  .blocked { background: #eeeeee; cursor: not-allowed; }
+  .visited { background: #81c784; color: #000; font-weight: bold; }
+  .highlight { background: #ffd54f; }
 </style>
 </head>
 
 <body>
 
-<h2>骑士走星棋（Knight Star Game）</h2>
+<h2>骑士走星棋</h2>
 <p>只能在 ⭐ 上移动骑士 ♞，尽量走最多步</p>
 
-<div id="info">
-  当前步数：<span id="score">0</span>
-</div>
-
+<div>当前步数：<span id="score">0</span></div>
 <div id="board"></div>
-
 <button onclick="resetGame()">↻ 重置</button>
 
 <script>
 const rows = 6, cols = 6;
 
-// 星星布局（与你原始代码一致）
+// 星星布局
 const boardMap = [
   "*OO**O",
   "O***OO",
@@ -68,20 +57,17 @@ const knightMoves = [
   [-1, -2], [1, -2], [-2, 1], [-2, -1]
 ];
 
-let board = [];
-let visited = [];
-let currentPos = null;
-let moveCount = 0;
+let visited, moveOrder, moveCount, currentPos;
 
 const boardDiv = document.getElementById("board");
 const scoreSpan = document.getElementById("score");
 
 function resetGame() {
-  board = [];
   visited = Array(rows).fill().map(() => Array(cols).fill(false));
-  currentPos = null;
+  moveOrder = [];
   moveCount = 0;
-  scoreSpan.textContent = "0";
+  currentPos = null;
+  scoreSpan.textContent = moveCount;
   drawBoard();
 }
 
@@ -95,13 +81,16 @@ function drawBoard() {
       if (boardMap[y][x] === "O") {
         cell.classList.add("blocked");
       } else {
-        cell.textContent = "⭐";
+        // 当前骑士所在显示 ♞
+        if (currentPos && currentPos.x === x && currentPos.y === y) {
+          cell.textContent = "♞";
+        } else if (visited[y][x]) {
+          cell.classList.add("visited");
+          cell.textContent = moveCountAt(x, y);
+        } else {
+          cell.textContent = "⭐";
+        }
         cell.onclick = () => onCellClick(x, y);
-      }
-
-      if (visited[y][x]) {
-        cell.classList.add("visited");
-        cell.textContent = moveCountAt(x, y);
       }
 
       boardDiv.appendChild(cell);
@@ -109,8 +98,6 @@ function drawBoard() {
   }
   highlightMoves();
 }
-
-let moveOrder = [];
 
 function moveCountAt(x, y) {
   const idx = moveOrder.findIndex(p => p.x === x && p.y === y);
@@ -131,17 +118,26 @@ function onCellClick(x, y) {
       alert("这个星已经走过了！");
       return;
     }
+    // 离开当前格子，显示数字
+    const prev = currentPos;
+    visited[prev.y][prev.x] = true;
   }
 
-  visited[y][x] = true;
-  moveOrder.push({x, y});
+  // 移动骑士
   currentPos = {x, y};
+  moveOrder.push({x, y});
   moveCount++;
   scoreSpan.textContent = moveCount;
 
   drawBoard();
 
   if (!hasNextMove()) {
+    // 游戏结束，把骑士显示的格子显示数字
+    if (currentPos) {
+      visited[currentPos.y][currentPos.x] = true;
+      currentPos = null;
+    }
+    drawBoard();
     alert("游戏结束！你的得分是：" + moveCount);
   }
 }
@@ -186,3 +182,4 @@ resetGame();
 
 </body>
 </html>
+
