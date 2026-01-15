@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>骑士走棋</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <h1>使用马的走法走（L形）</h1>
+    <div id="knight game-list"></div>
+
+    <script>
+        fetch('knight.json')
+        .then(res => res.json())
+        .then(games => {
+            const container = document.getElementById('knight game-list');
+            games.forEach(game => {
+                const div = document.createElement('div');
+                div.className = 'knight game-item';
+                div.innerHTML = `<a href="${game.url}" target="_blank">${game.name}</a>`;
+                container.appendChild(div);
+            });
+        });
+    </script>
+</body>
+</html>
