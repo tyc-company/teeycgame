@@ -2,5 +2,6 @@
     {"name": "贪吃蛇🐍", "url": "snake.html"},
     {"name": "井字棋❌⭕", "url": "tic-tac-toe.html"},
     {"name":"推箱子📦","url":"push the box.html"},
-    {"name":"打拼音比赛","url":"pinyin.html"}
+    {"name":"打拼音比赛","url":"pinyin.html"},
+    {"name":"骑士走棋","url":"knight star game"}
 ]
