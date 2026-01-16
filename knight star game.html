@@ -1,185 +1,176 @@
 <!DOCTYPE html>
 <html lang="zh">
 <head>
-<meta charset="UTF-8" />
-<title>骑士走星棋</title>
-<style>
-  body { font-family: Arial, sans-serif; text-align: center; }
-  #board {
-    display: grid;
-    grid-template-columns: repeat(6, 70px);
-    grid-template-rows: repeat(6, 70px);
-    gap: 4px;
-    justify-content: center;
-    margin: 20px auto;
+  <meta charset="utf-8" />
+  <title>骑士走星棋</title>
+
+  <link rel="stylesheet" type="text/css" href="./_ejs_library/css/ejss.css" />
+  <script src="./_ejs_library/scripts/textresizedetector.js"></script>
+  <script src="./_ejs_library/ejsS.v1.min.js"></script>
+
+<script>
+function _simulation (_topFrame,_libraryPath,_codebasePath) {
+
+  var _model = EJSS_CORE.createAnimationLMS();
+  var _view;
+
+  var numOfRows = 6, numOfCols = 6;
+  var squareX=[], squareY=[], squareColor=[], squareFilled=[], squareHighlighted=[];
+  var idxToPos=[], posToIdx=[];
+  var symbolStr=[], symbolX=[], symbolY=[];
+  var textStr=[], textX=[], textY=[];
+  var squareLength = 1;
+  var numOfSquares = 0, numOfStars = 0;
+  var moveCounter = 1, topScore = 0;
+  var gameOver = false, interact;
+
+  var filledColor = "rgba(0,255,0,0.5)";
+  var unfilledColor = "rgba(0,0,255,0.5)";
+  var highlightColor = "#aed581";
+
+  var font = "normal normal 2vw";
+  var fontSymbol = "normal normal 5vw";
+
+  var textXunicode = -1, textYunicode = 0;
+
+  function findPossibleMoves(x,y){
+    const dx=[-1,1,2,2,-1,1,-2,-2];
+    const dy=[2,2,1,-1,-2,-2,1,-1];
+    var possible=false;
+
+    for(let i=0;i<8;i++){
+      let nx=x+dx[i], ny=y+dy[i];
+      if(nx<0||nx>=numOfCols||ny<0||ny>=numOfRows) continue;
+      let idx=posToIdx[ny][nx];
+      if(!squareFilled[idx]){
+        squareHighlighted[idx]=1;
+        possible=true;
+      }
+    }
+    return possible;
   }
-  .cell {
-    width: 70px;
-    height: 70px;
-    background: #bbdefb;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    font-size: 28px;
-    cursor: pointer;
-    border-radius: 6px;
+
+  function onClickSquare(idx){
+    if(gameOver) return;
+    if(!squareHighlighted[idx]) return;
+
+    let x=idxToPos[idx][0], y=idxToPos[idx][1];
+    squareFilled[idx]=1;
+    squareColor[idx]=filledColor;
+
+    textStr.push(moveCounter++);
+    textX.push(x*squareLength);
+    textY.push(y*squareLength);
+    textXunicode=x*squareLength;
+    textYunicode=y*squareLength;
+
+    for(let i=0;i<numOfSquares;i++){
+      squareHighlighted[i]=0;
+      if(squareColor[i]===highlightColor)
+        squareColor[i]=unfilledColor;
+    }
+
+    topScore=Math.max(topScore,moveCounter-1);
+
+    if(moveCounter===numOfStars+1 || !findPossibleMoves(x,y)){
+      gameOver=true;
+    }
   }
-  .blocked { background: #eeeeee; cursor: not-allowed; }
-  .visited { background: #81c784; color: #000; font-weight: bold; }
-  .highlight { background: #ffd54f; }
-</style>
+
+  _model.addToInitialization(function(){
+    var board=[
+      "*OO**O",
+      "O***OO",
+      "******",
+      "****O*",
+      "*O***O",
+      "O****O"
+    ];
+
+    squareX=[]; squareY=[]; squareColor=[];
+    squareFilled=[]; squareHighlighted=[];
+    symbolStr=[]; symbolX=[]; symbolY=[];
+    idxToPos=[]; posToIdx=[];
+    textStr=[]; textX=[]; textY=[];
+    numOfSquares=0; numOfStars=0;
+    moveCounter=1; gameOver=false;
+
+    for(let i=0;i<numOfRows;i++){
+      posToIdx.push([]);
+      for(let j=0;j<numOfCols;j++){
+        if(board[i][j]==="*"){
+          squareFilled.push(0);
+          squareHighlighted.push(1);
+          symbolStr.push("⭐");
+          symbolX.push(j);
+          symbolY.push(i);
+          numOfStars++;
+        } else {
+          squareFilled.push(1);
+          squareHighlighted.push(0);
+        }
+        squareX.push(j);
+        squareY.push(i);
+        squareColor.push(unfilledColor);
+        idxToPos.push([j,i]);
+        posToIdx[i].push(numOfSquares++);
+      }
+    }
+  });
+
+  function _createView(){
+    _view=EJSS_CORE.createView(_topFrame);
+    _view._setLibraryPath(_libraryPath);
+
+    _view._addElement(EJSS_DRAWING2D.plottingPanel,'panel',_view._topFrame)
+      .setProperty("SquareAspect",true)
+      .setProperty("Height","95vh");
+
+    _view._addElement(EJSS_DRAWING2D.shapeSet,'board',_view.panel)
+      .setProperty("ShapeType","RECTANGLE")
+      .setProperty("X",()=>squareX)
+      .setProperty("Y",()=>squareY)
+      .setProperty("SizeX",squareLength)
+      .setProperty("SizeY",squareLength)
+      .setProperty("FillColor",()=>squareColor)
+      .setProperty("ElementInteracted",()=>interact)
+      .setAction("OnPress",()=>onClickSquare(interact));
+
+    _view._addElement(EJSS_DRAWING2D.textSet,'stars',_view.panel)
+      .setProperty("Text",()=>symbolStr)
+      .setProperty("X",()=>symbolX)
+      .setProperty("Y",()=>symbolY)
+      .setProperty("Font",fontSymbol);
+
+    _view._addElement(EJSS_DRAWING2D.text,'knight',_view.panel)
+      .setProperty("Text","♞")
+      .setProperty("X",()=>textXunicode)
+      .setProperty("Y",()=>textYunicode)
+      .setProperty("Font","normal normal 7vw")
+      .setProperty("FillColor","magenta");
+
+    _view._addElement(EJSS_DRAWING2D.textSet,'steps',_view.panel)
+      .setProperty("Text",()=>textStr)
+      .setProperty("X",()=>textX)
+      .setProperty("Y",()=>textY)
+      .setProperty("Font",font);
+
+    _model.setView(_view);
+    _model.reset();
+  }
+
+  _createView();
+  return _model;
+}
+
+window.onload=function(){
+  _simulation("_topFrame","./_ejs_library/",null);
+};
+</script>
 </head>
 
 <body>
-
-<h2>骑士走星棋</h2>
-<p>只能在 ⭐ 上移动骑士 ♞，尽量走最多步</p>
-
-<div>当前步数：<span id="score">0</span></div>
-<div id="board"></div>
-<button onclick="resetGame()">↻ 重置</button>
-
-<script>
-const rows = 6, cols = 6;
-
-// 星星布局
-const boardMap = [
-  "*OO**O",
-  "O***OO",
-  "******",
-  "****O*",
-  "*O***O",
-  "O****O"
-];
-
-const knightMoves = [
-  [-1,  2], [1,  2], [2,  1], [2, -1],
-  [-1, -2], [1, -2], [-2, 1], [-2, -1]
-];
-
-let visited, moveOrder, moveCount, currentPos;
-
-const boardDiv = document.getElementById("board");
-const scoreSpan = document.getElementById("score");
-
-function resetGame() {
-  visited = Array(rows).fill().map(() => Array(cols).fill(false));
-  moveOrder = [];
-  moveCount = 0;
-  currentPos = null;
-  scoreSpan.textContent = moveCount;
-  drawBoard();
-}
-
-function drawBoard() {
-  boardDiv.innerHTML = "";
-  for (let y = 0; y < rows; y++) {
-    for (let x = 0; x < cols; x++) {
-      const cell = document.createElement("div");
-      cell.className = "cell";
-
-      if (boardMap[y][x] === "O") {
-        cell.classList.add("blocked");
-      } else {
-        // 当前骑士所在显示 ♞
-        if (currentPos && currentPos.x === x && currentPos.y === y) {
-          cell.textContent = "♞";
-        } else if (visited[y][x]) {
-          cell.classList.add("visited");
-          cell.textContent = moveCountAt(x, y);
-        } else {
-          cell.textContent = "⭐";
-        }
-        cell.onclick = () => onCellClick(x, y);
-      }
-
-      boardDiv.appendChild(cell);
-    }
-  }
-  highlightMoves();
-}
-
-function moveCountAt(x, y) {
-  const idx = moveOrder.findIndex(p => p.x === x && p.y === y);
-  return idx >= 0 ? idx + 1 : "";
-}
-
-function onCellClick(x, y) {
-  if (boardMap[y][x] === "O") return;
-
-  if (currentPos) {
-    const dx = Math.abs(x - currentPos.x);
-    const dy = Math.abs(y - currentPos.y);
-    if (!((dx === 1 && dy === 2) || (dx === 2 && dy === 1))) {
-      alert("非法骑士移动！");
-      return;
-    }
-    if (visited[y][x]) {
-      alert("这个星已经走过了！");
-      return;
-    }
-    // 离开当前格子，显示数字
-    const prev = currentPos;
-    visited[prev.y][prev.x] = true;
-  }
-
-  // 移动骑士
-  currentPos = {x, y};
-  moveOrder.push({x, y});
-  moveCount++;
-  scoreSpan.textContent = moveCount;
-
-  drawBoard();
-
-  if (!hasNextMove()) {
-    // 游戏结束，把骑士显示的格子显示数字
-    if (currentPos) {
-      visited[currentPos.y][currentPos.x] = true;
-      currentPos = null;
-    }
-    drawBoard();
-    alert("游戏结束！你的得分是：" + moveCount);
-  }
-}
-
-function hasNextMove() {
-  if (!currentPos) return true;
-  for (const [dx, dy] of knightMoves) {
-    const nx = currentPos.x + dx;
-    const ny = currentPos.y + dy;
-    if (
-      nx >= 0 && nx < cols &&
-      ny >= 0 && ny < rows &&
-      boardMap[ny][nx] === "*" &&
-      !visited[ny][nx]
-    ) {
-      return true;
-    }
-  }
-  return false;
-}
-
-function highlightMoves() {
-  if (!currentPos) return;
-  const cells = document.querySelectorAll(".cell");
-  knightMoves.forEach(([dx, dy]) => {
-    const nx = currentPos.x + dx;
-    const ny = currentPos.y + dy;
-    if (
-      nx >= 0 && nx < cols &&
-      ny >= 0 && ny < rows &&
-      boardMap[ny][nx] === "*" &&
-      !visited[ny][nx]
-    ) {
-      const idx = ny * cols + nx;
-      cells[idx].classList.add("highlight");
-    }
-  });
-}
-
-resetGame();
-</script>
-
+  <div id="_topFrame"></div>
 </body>
 </html>
 
