@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>拼音炮塔</title>
+<style>
+body {
+    margin: 0;
+    background: radial-gradient(circle at top, #111, #000);
+    color: #0ff;
+    font-family: "微软雅黑", sans-serif;
+    overflow: hidden;
+}
+#ui {
+    position: absolute;
+    bottom: 10px;
+    width: 100%;
+    text-align: center;
+}
+#inputBox {
+    font-size: 22px;
+    padding: 8px 12px;
+    width: 260px;
+    border-radius: 6px;
+    border: 2px solid #0ff;
+    background: #000;
+    color: #0ff;
+    outline: none;
+    text-align: center;
+}
+#inputBox.error {
+    border-color: red;
+    color: red;
+}
+#score {
+    position: absolute;
+    left: 15px;
+    bottom: 15px;
+    font-size: 20px;
+}
+</style>
+</head>
+<body>
+
+<canvas id="game"></canvas>
+<div id="score">得分：0</div>
+
+<div id="ui">
+    <input id="inputBox" placeholder="输入拼音，回车发射">
+</div>
+
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+const tower = {
+    x: canvas.width / 2,
+    y: canvas.height - 80,
+    r: 35
+};
+
+let score = 0;
+let enemies = [];
+let bullets = [];
+let boss = null;
+let nextBossScore = 1000;
+
+let spawnTimer = 0;
+let spawnInterval = 120;
+const minSpawnInterval = 45;
+
+const words = [
+    { text: "学习", pinyin: "xuexi" },
+    { text: "老师", pinyin: "laoshi" },
+    { text: "学生", pinyin: "xuesheng" },
+    { text: "认真", pinyin: "renzhen" },
+    { text: "坚持", pinyin: "jianchi" },
+    { text: "全神贯注", pinyin: "quanshenguanzhu" },
+    { text: "专心致志", pinyin: "zhuanxinzhizhi" },
+    { text: "勤学苦练", pinyin: "qinxuekulian" }
+];
+
+function distance(a, b) {
+    return Math.hypot(a.x - b.x, a.y - b.y);
+}
+
+function spawnEnemy() {
+    const w = words[Math.floor(Math.random() * words.length)];
+    enemies.push({
+        ...w,
+        x: Math.random() * (canvas.width - 100) + 50,
+        y: -30,
+        speed: 0.5
+    });
+}
+
+function spawnBoss() {
+    enemies = [];
+
+    const parts = [];
+    for (let i = 0; i < 5; i++) {
+        const w = words[Math.floor(Math.random() * words.length)];
+        parts.push({ ...w });
+    }
+
+    boss = {
+        x: canvas.width / 2,
+        y: -80,
+        speed: 0.25,
+        parts
+    };
+}
+
+function fireBullet(pinyin) {
+    if (boss) {
+        const idx = boss.parts.findIndex(p => p.pinyin === pinyin);
+        if (idx === -1) return false;
+
+        bullets.push({
+            x: tower.x,
+            y: tower.y,
+            target: boss.parts[idx],
+            isBoss: true
+        });
+
+        boss.parts.splice(idx, 1);
+        return true;
+    }
+
+    const targets = enemies
+        .filter(e => e.pinyin === pinyin)
+        .sort((a, b) => distance(a, tower) - distance(b, tower));
+
+    if (targets.length === 0) return false;
+
+    bullets.push({
+        x: tower.x,
+        y: tower.y,
+        target: targets[0],
+        isBoss: false
+    });
+    return true;
+}
+
+const inputBox = document.getElementById("inputBox");
+inputBox.addEventListener("keydown", e => {
+    if (e.key === "Enter") {
+        const v = inputBox.value.trim().toLowerCase();
+        inputBox.value = "";
+
+        if (!fireBullet(v)) {
+            inputBox.classList.add("error");
+            setTimeout(() => inputBox.classList.remove("error"), 300);
+        }
+    }
+});
+
+function update() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // 触发魔王
+    if (!boss && score >= nextBossScore) {
+        spawnBoss();
+    }
+
+    // 普通刷怪
+    if (!boss) {
+        spawnTimer++;
+        if (spawnTimer > spawnInterval) {
+            spawnEnemy();
+            spawnTimer = 0;
+            if (spawnInterval > minSpawnInterval) spawnInterval--;
+        }
+    }
+
+    // 炮塔
+    ctx.beginPath();
+    ctx.arc(tower.x, tower.y, tower.r, 0, Math.PI * 2);
+    ctx.fillStyle = "#0ff";
+    ctx.shadowColor = "#0ff";
+    ctx.shadowBlur = 20;
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    // 魔王
+    if (boss) {
+        boss.y += boss.speed;
+
+        ctx.fillStyle = "#ff0";
+        ctx.font = "26px 微软雅黑";
+        ctx.textAlign = "center";
+        ctx.fillText("魔王", boss.x, boss.y);
+
+        boss.parts.forEach((p, i) => {
+            ctx.font = "18px 微软雅黑";
+            ctx.fillText(p.text, boss.x, boss.y + 30 + i * 26);
+            ctx.font = "14px Arial";
+            ctx.fillText(p.pinyin, boss.x, boss.y + 46 + i * 26);
+        });
+
+        if (distance(boss, tower) < tower.r) {
+            alert("被魔王击败了！得分：" + score);
+            location.reload();
+        }
+
+        if (boss.parts.length === 0) {
+            boss = null;
+            nextBossScore += 1000;
+        }
+    }
+
+    // 普通敌人
+    enemies.forEach(e => {
+        e.y += e.speed;
+        ctx.fillStyle = "#f0f";
+        ctx.font = "20px 微软雅黑";
+        ctx.fillText(e.text, e.x, e.y);
+        ctx.font = "14px Arial";
+        ctx.fillText(e.pinyin, e.x, e.y + 18);
+
+        if (distance(e, tower) < tower.r) {
+            alert("游戏结束！得分：" + score);
+            location.reload();
+        }
+    });
+
+    // 子弹
+    bullets.forEach((b, i) => {
+        const t = b.target;
+        const dx = t.x - b.x;
+        const dy = t.y - b.y;
+        const len = Math.hypot(dx, dy);
+        b.x += dx / len * 10;
+        b.y += dy / len * 10;
+
+        ctx.beginPath();
+        ctx.arc(b.x, b.y, 5, 0, Math.PI * 2);
+        ctx.fillStyle = "#fff";
+        ctx.fill();
+
+        if (distance(b, t) < 10) {
+            if (!b.isBoss) {
+                enemies.splice(enemies.indexOf(t), 1);
+            }
+            bullets.splice(i, 1);
+            score += 10;
+            document.getElementById("score").innerText = "得分：" + score;
+        }
+    });
+
+    requestAnimationFrame(update);
+}
+
+update();
+</script>
+</body>
+</html>
