@@ -3,5 +3,6 @@
     {"name": "井字棋❌⭕", "url": "tic-tac-toe.html"},
     {"name":"推箱子📦","url":"push the box.html"},
     {"name":"打拼音比赛","url":"pinyin.html"},
-    {"name":"骑士走棋","url":"knight game.html"}
+    {"name":"骑士走棋","url":"knight game.html"},
+    {"name":"拼音炮塔","url":"pinyin tower.html"}
 ]
